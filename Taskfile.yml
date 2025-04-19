@@ -1,0 +1,50 @@
+# https://taskfile.dev
+
+version: "3"
+
+vars:
+  GREETING: Hello, World!
+  OUTPUT_DIR: ./temp
+  DOCKER_TAG: latest
+  GIT_COMMIT:
+    sh: git log -1 --format=%h
+  BINARY_NAME:
+    sh: |
+      if [ "{{OS}}" = "windows" ]; then
+        echo "main.exe"
+      else
+        echo "main"
+      fi
+
+tasks:
+  default:
+    cmds:
+      - echo "{{OS}}"
+    silent: true
+
+  codegen:
+    sources:
+      - ./pkg/ent/**/*.go
+      - ./pkg/ent/*.go
+    cmds:
+      - go generate ./pkg/ent
+
+  build:
+    deps: [codegen]
+    cmds:
+      - go build -o {{.OUTPUT_DIR}}/{{.BINARY_NAME}} ./cmd/backend/main.go
+
+  run:
+    deps: [build]
+    cmds:
+      - "{{.OUTPUT_DIR}}/{{.BINARY_NAME}} run"
+
+  docker-build:
+    deps: [codegen]
+    cmds:
+      - docker build -t ghcr.io/pineapple217/cvrs:{{.DOCKER_TAG}} --build-arg GIT_COMMIT={{.GIT_COMMIT}} .
+
+  docker-push:
+    deps: [docker-build]
+    cmds:
+      - docker push ghcr.io/pineapple217/cvrs:{{.DOCKER_TAG}}

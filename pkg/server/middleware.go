@@ -1,0 +1,35 @@
+package server
+
+import (
+	"log/slog"
+	"strings"
+	"time"
+
+	"github.com/labstack/echo/v4"
+	echoMw "github.com/labstack/echo/v4/middleware"
+)
+
+func (s *Server) ApplyMiddleware() {
+	slog.Info("Applying middlewares")
+	s.e.Use(echoMw.RateLimiterWithConfig(echoMw.RateLimiterConfig{
+		Store: echoMw.NewRateLimiterMemoryStoreWithConfig(
+			echoMw.RateLimiterMemoryStoreConfig{Rate: 10, Burst: 30, ExpiresIn: 3 * time.Minute},
+		),
+	}))
+
+	s.e.Use(func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) error {
+			reqPath := c.Request().URL.Path
+
+			if strings.HasPrefix(reqPath, "/assets/") {
+				c.Response().Header().Set("Cache-Control", "public, max-age=31536000, immutable")
+			}
+
+			return next(c)
+		}
+	})
+
+	s.e.Use(echoMw.GzipWithConfig(echoMw.GzipConfig{
+		Level: 5,
+	}))
+}
