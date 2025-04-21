@@ -16,6 +16,22 @@ func (s *Server) ApplyMiddleware() {
 			echoMw.RateLimiterMemoryStoreConfig{Rate: 10, Burst: 30, ExpiresIn: 3 * time.Minute},
 		),
 	}))
+	s.e.Use(echoMw.RequestLoggerWithConfig(echoMw.RequestLoggerConfig{
+		LogStatus:  true,
+		LogURI:     true,
+		LogMethod:  true,
+		LogLatency: true,
+		LogValuesFunc: func(c echo.Context, v echoMw.RequestLoggerValues) error {
+			slog.Info("request",
+				"method", v.Method,
+				"status", v.Status,
+				"latency", v.Latency,
+				"path", v.URI,
+			)
+			return nil
+
+		},
+	}))
 
 	s.e.Use(func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
