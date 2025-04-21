@@ -9,6 +9,7 @@ import (
 	"github.com/Pineapple217/cvrs/pkg/database"
 	"github.com/Pineapple217/cvrs/pkg/handler"
 	"github.com/Pineapple217/cvrs/pkg/server"
+	"github.com/Pineapple217/cvrs/pkg/util"
 	"github.com/spf13/cobra"
 )
 
@@ -33,9 +34,10 @@ func main() {
 			fmt.Println(banner)
 			os.Stdout.Sync()
 
-			db := database.Database{}
+			db, err := database.NewDatabase("file:./data/database.db?_fk=1&_journal_mode=WAL")
+			util.MaybeDieErr(err)
 
-			h := handler.NewHandler(&db)
+			h := handler.NewHandler(db)
 
 			server := server.NewServer()
 			server.RegisterRoutes(h)
