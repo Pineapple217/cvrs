@@ -27,7 +27,7 @@ func (h *Handler) Login(c echo.Context) error {
 	body := loginRequest{}
 	err := json.NewDecoder(c.Request().Body).Decode(&body)
 	if err != nil {
-		return err
+		return echo.NewHTTPError(http.StatusBadRequest)
 	}
 	if body.Password == "" || body.Username == "" {
 		return echo.NewHTTPError(http.StatusBadRequest)

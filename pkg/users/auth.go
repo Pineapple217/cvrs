@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/Pineapple217/cvrs/pkg/ent"
-	"github.com/golang-jwt/jwt"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/labstack/echo/v4"
 )
 
@@ -18,7 +18,7 @@ type JwtClaims struct {
 	Username string `json:"usn"`
 	UserId   int    `json:"uid"`
 	IsAdmin  bool   `json:"adm"`
-	jwt.StandardClaims
+	jwt.RegisteredClaims
 }
 
 func CreateJWT(user *ent.User) (string, error) {
@@ -28,9 +28,9 @@ func CreateJWT(user *ent.User) (string, error) {
 		Username: user.Username,
 		UserId:   user.ID,
 		IsAdmin:  user.IsAdmin,
-		StandardClaims: jwt.StandardClaims{
-			ExpiresAt: time.Now().Add(expiration).Unix(),
-			IssuedAt:  time.Now().Unix(),
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(expiration)),
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
 			Issuer:    "cvrs",
 		},
 	})
