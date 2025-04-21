@@ -18,7 +18,6 @@ func NewDatabase(sqliteOptions string) (*Database, error) {
 	if err != nil {
 		return nil, errors.New(fmt.Sprintf("failed opening connection to sqlite: %v", err))
 	}
-	defer client.Close()
 
 	if err := client.Schema.Create(context.Background()); err != nil {
 		return nil, errors.New(fmt.Sprintf("failed creating schema resources: %v", err))

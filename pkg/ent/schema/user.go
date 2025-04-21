@@ -15,9 +15,17 @@ type User struct {
 // Fields of the User.
 func (User) Fields() []ent.Field {
 	return []ent.Field{
-		field.String("username"),
-		field.String("password"),
-		field.Time("created_at").Default(time.Now),
+		field.String("username").
+			MinLen(3).
+			MaxLen(32).
+			Unique(),
+		field.Bytes("password").
+			NotEmpty(),
+		field.Bool("is_admin").
+			Default(false),
+		field.Time("created_at").
+			Default(time.Now).
+			Immutable(),
 	}
 }
 

@@ -5,6 +5,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Pineapple217/cvrs/pkg/users"
 	"github.com/labstack/echo/v4"
 	echoMw "github.com/labstack/echo/v4/middleware"
 )
@@ -44,6 +45,7 @@ func (s *Server) ApplyMiddleware() {
 			return next(c)
 		}
 	})
+	s.e.Use(users.Auth([]byte("adsjfkaweijrfsdjfkla")))
 
 	s.e.Use(echoMw.GzipWithConfig(echoMw.GzipConfig{
 		Level: 5,
