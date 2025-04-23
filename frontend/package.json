@@ -3,7 +3,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build --outDir ../pkg/embed/build",
+    "build": "vite build --outDir ../pkg/static/build",
     "preview": "vite preview"
   },
   "dependencies": {

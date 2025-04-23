@@ -1,7 +1,7 @@
 ARG GO_VERSION=1.24
 ARG NODE_VERSION=22.14.0
 
-FROM node:${NODE_VERSION}-alpine as frontend-build
+FROM node:${NODE_VERSION}-alpine AS frontend-build
 
 WORKDIR /app
 COPY ./frontend/package.json ./frontend/package-lock.json ./
@@ -20,7 +20,7 @@ RUN --mount=type=cache,target=/go/pkg/mod/ \
     go mod download -x
 
 COPY . . 
-COPY --from=frontend-build /pkg/embed/build ./pkg/static/build
+COPY --from=frontend-build /pkg/static/build ./pkg/static/build
 
 RUN --mount=type=cache,target=/go/pkg/mod/ \
     go build -ldflags='-s -w -extldflags "-static"' -o /bin/cvrs ./cmd/backend/main.go

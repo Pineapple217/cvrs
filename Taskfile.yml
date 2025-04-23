@@ -3,7 +3,6 @@
 version: "3"
 
 vars:
-  GREETING: Hello, World!
   OUTPUT_DIR: ./temp
   DOCKER_TAG: latest
   GIT_COMMIT:
@@ -17,11 +16,6 @@ vars:
       fi
 
 tasks:
-  default:
-    cmds:
-      - echo "{{OS}}"
-    silent: true
-
   codegen:
     sources:
       - ./pkg/ent/**/*.go
