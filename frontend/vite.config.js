@@ -1,7 +1,12 @@
-import { defineConfig } from 'vite';
-import preact from '@preact/preset-vite';
+import { defineConfig } from "vite";
+import preact from "@preact/preset-vite";
 
-// https://vitejs.dev/config/
-export default defineConfig({
-	plugins: [preact()],
-});
+export default defineConfig(({ command }) => ({
+  plugins: [preact()],
+  define: {
+    __BACKEND_URL__: JSON.stringify(
+      command === "serve" ? "http://localhost:3000/api" : "/api"
+    ),
+    __JWT_LOCALSTORAGE__: JSON.stringify("cvrs_auth_token"),
+  },
+}));
