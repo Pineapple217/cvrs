@@ -15,7 +15,6 @@ export function Login() {
     e.preventDefault();
     setError(null);
     try {
-      // Replace with your real auth endpoint
       const response = await fetch(__BACKEND_URL__ + "/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -23,9 +22,7 @@ export function Login() {
       });
       if (!response.ok) throw new Error("Invalid credentials");
       const { token } = await response.json();
-      // Save token via context (also sessionStorage inside)
       setToken(token);
-      // Redirect to home or protected route
       window.location.replace("/");
     } catch (err) {
       setError(err.message);
@@ -49,33 +46,35 @@ export function Login() {
   };
 
   return (
-    <div class="login-container">
-      <form class="login-form" onSubmit={handleSubmit}>
-        <h2>Login</h2>
-        {error && <p class="error">{error}</p>}
+    <div class="container" style="max-width: 600px;">
+      <div class="box" style="margin-top: 5rem;">
+        <form onSubmit={handleSubmit}>
+          <h2>Login</h2>
 
-        <label htmlFor="username">Username</label>
-        <input
-          id="username"
-          name="username"
-          type="text"
-          value={username}
-          onInput={handleUsernameInput}
-          required
-        />
+          <label htmlFor="username">Username</label>
+          <input
+            id="username"
+            name="username"
+            type="text"
+            value={username}
+            onInput={handleUsernameInput}
+            required
+          />
 
-        <label htmlFor="password">Password</label>
-        <input
-          id="password"
-          name="password"
-          type="password"
-          value={password}
-          onInput={handlePasswordInput}
-          required
-        />
+          <label htmlFor="password">Password</label>
+          <input
+            id="password"
+            name="password"
+            type="password"
+            value={password}
+            onInput={handlePasswordInput}
+            required
+          />
 
-        <button type="submit">Log In</button>
-      </form>
+          <button type="submit">Log In</button>
+        </form>
+      </div>
+      {error && <div class="alert alert-danger">{error}</div>}
     </div>
   );
 }

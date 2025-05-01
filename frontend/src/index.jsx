@@ -12,7 +12,7 @@ export function App() {
   return (
     <LocationProvider>
       <AuthProvider>
-        <Header />
+        {/* <Header /> */}
         <main>
           <Router>
             <Route path="/auth/login" component={Login} />

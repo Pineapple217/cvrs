@@ -27,7 +27,8 @@ export const AuthContext = createContext({
 export function AuthProvider({ children }) {
   // Initialize token from localStorage
   const [token, setTokenState] = useState(() => {
-    return localStorage.getItem(__JWT_LOCALSTORAGE__);
+    const stored = localStorage.getItem(__JWT_LOCALSTORAGE__);
+    return stored && isTokenValid(stored) ? stored : null;
   });
   const { url, route } = useLocation();
 
@@ -41,7 +42,6 @@ export function AuthProvider({ children }) {
   };
 
   useEffect(() => {
-    // If no token found, redirect to login page
     if (!token && url != "/auth/login") {
       route("/auth/login");
     }
@@ -60,4 +60,21 @@ export function AuthProvider({ children }) {
  */
 export function useAuth() {
   return useContext(AuthContext);
+}
+
+/**
+ * Decode JWT and check if it's expired
+ * @param {string} token
+ * @returns {boolean}
+ */
+function isTokenValid(token) {
+  try {
+    const [, payloadBase64] = token.split(".");
+    const payload = JSON.parse(atob(payloadBase64));
+    const exp = payload.exp;
+    if (!exp) return false;
+    return Date.now() < exp * 1000; // exp is in seconds, JS uses ms
+  } catch (e) {
+    return false;
+  }
 }
