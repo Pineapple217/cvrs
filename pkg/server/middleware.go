@@ -10,7 +10,7 @@ import (
 	echoMw "github.com/labstack/echo/v4/middleware"
 )
 
-func (s *Server) ApplyMiddleware() {
+func (s *Server) ApplyMiddleware(dev bool) {
 	slog.Info("Applying middlewares")
 	s.e.Use(echoMw.RateLimiterWithConfig(echoMw.RateLimiterConfig{
 		Store: echoMw.NewRateLimiterMemoryStoreWithConfig(
@@ -33,6 +33,12 @@ func (s *Server) ApplyMiddleware() {
 
 		},
 	}))
+
+	if dev {
+		s.e.Use(echoMw.CORSWithConfig(echoMw.CORSConfig{
+			AllowOrigins: []string{"http://localhost:5173"},
+		}))
+	}
 
 	s.e.Use(func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {

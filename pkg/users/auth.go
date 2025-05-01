@@ -12,7 +12,7 @@ import (
 )
 
 const SECRET = "adsjfkaweijrfsdjfkla"
-const DUR = 3600 * 24
+const DUR = 24
 
 type JwtClaims struct {
 	Username string `json:"usn"`
@@ -22,7 +22,7 @@ type JwtClaims struct {
 }
 
 func CreateJWT(user *ent.User) (string, error) {
-	expiration := time.Second * time.Duration(DUR)
+	expiration := time.Hour * time.Duration(DUR)
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, JwtClaims{
 		Username: user.Username,

@@ -42,7 +42,7 @@ func main() {
 
 			server := server.NewServer()
 			server.RegisterRoutes(h)
-			server.ApplyMiddleware()
+			server.ApplyMiddleware(true)
 			server.Start()
 
 			quit := make(chan os.Signal, 1)
