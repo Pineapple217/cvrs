@@ -3,9 +3,20 @@ import { useState, useEffect, useContext } from "preact/hooks";
 import { useLocation } from "preact-iso";
 
 /**
+ * @typedef {Object} JwtPayload
+ * @property {string} usn
+ * @property {number} uid
+ * @property {boolean} adm
+ * @property {string} iss
+ * @property {number} exp
+ * @property {number} iat
+ */
+
+/**
  * @typedef {Object} AuthContextType
  * @property {string | null} token - Current JWT token
  * @property {(token: string) => void} setToken - Function to update the JWT token
+ * @property {JwtPayload | null} payload - Decoded payload of the token
  */
 
 /**
@@ -15,6 +26,8 @@ import { useLocation } from "preact-iso";
 export const AuthContext = createContext({
   token: null,
   setToken: () => {},
+  payload: null,
+  loading: true,
 });
 
 /**
@@ -26,10 +39,9 @@ export const AuthContext = createContext({
  */
 export function AuthProvider({ children }) {
   // Initialize token from localStorage
-  const [token, setTokenState] = useState(() => {
-    const stored = localStorage.getItem(__JWT_LOCALSTORAGE__);
-    return stored && isTokenValid(stored) ? stored : null;
-  });
+  const [token, setTokenState] = useState(null);
+  const [payload, setPayload] = useState(null);
+  const [loading, setLoading] = useState(true);
   const { url, route } = useLocation();
 
   /**
@@ -42,13 +54,28 @@ export function AuthProvider({ children }) {
   };
 
   useEffect(() => {
-    if (!token && url != "/auth/login") {
-      route("/auth/login");
+    const stored = localStorage.getItem(__JWT_LOCALSTORAGE__);
+    if (stored && isTokenValid(stored)) {
+      setTokenState(stored);
+      setPayload(decodePayload(stored));
     }
-  }, [token, url]);
+    setLoading(false);
+  }, []);
+
+  useEffect(() => {
+    if (!loading && !token && !url.startsWith("/auth/login")) {
+      console.log(url);
+      const redirectTo = encodeURIComponent(url);
+      route(`/auth/login?r=${redirectTo}`);
+    }
+  }, [token, url, loading]);
+
+  if (loading) {
+    return null;
+  }
 
   return (
-    <AuthContext.Provider value={{ token, setToken }}>
+    <AuthContext.Provider value={{ token, setToken, payload }}>
       {children}
     </AuthContext.Provider>
   );
@@ -69,12 +96,20 @@ export function useAuth() {
  */
 function isTokenValid(token) {
   try {
-    const [, payloadBase64] = token.split(".");
-    const payload = JSON.parse(atob(payloadBase64));
-    const exp = payload.exp;
-    if (!exp) return false;
-    return Date.now() < exp * 1000; // exp is in seconds, JS uses ms
-  } catch (e) {
+    const payload = decodePayload(token);
+    return payload && Date.now() < payload.exp * 1000;
+  } catch {
     return false;
   }
+}
+
+/**
+ * Decode the payload of a JWT token
+ * @param {string} token
+ * @returns {JwtPayload}
+ */
+function decodePayload(token) {
+  const [, payloadBase64] = token.split(".");
+  const payloadJson = atob(payloadBase64);
+  return JSON.parse(payloadJson);
 }

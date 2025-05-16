@@ -15,7 +15,7 @@ export function Login() {
     e.preventDefault();
     setError(null);
     try {
-      const response = await fetch(__BACKEND_URL__ + "/login", {
+      const response = await fetch(__BACKEND_URL__ + "/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, password }),
@@ -23,7 +23,10 @@ export function Login() {
       if (!response.ok) throw new Error("Invalid credentials");
       const { token } = await response.json();
       setToken(token);
-      window.location.replace("/");
+
+      const redirect =
+        new URLSearchParams(window.location.search).get("r") || "/";
+      window.location.replace(redirect);
     } catch (err) {
       setError(err.message);
     }
@@ -57,6 +60,7 @@ export function Login() {
             name="username"
             type="text"
             value={username}
+            autoFocus
             onInput={handleUsernameInput}
             required
           />

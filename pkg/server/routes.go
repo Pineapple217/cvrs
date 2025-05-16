@@ -16,7 +16,8 @@ func (server *Server) RegisterRoutes(hdlr *handler.Handler) {
 
 	// backend
 	api := e.Group("api")
-	api.POST("/login", hdlr.Login)
+	api.POST("/auth/login", hdlr.Login)
+	api.GET("/auth/users", users.CheckAdmin(hdlr.Users))
 
 	// Temp: del me
 	api.GET("/admin", users.CheckAdmin(func(c echo.Context) error { return c.String(200, "admin cool") }))

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/Pineapple217/cvrs/pkg/ent"
+	"github.com/Pineapple217/cvrs/pkg/pid"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/labstack/echo/v4"
 )
@@ -16,7 +17,7 @@ const DUR = 24
 
 type JwtClaims struct {
 	Username string `json:"usn"`
-	UserId   int    `json:"uid"`
+	UserId   pid.ID `json:"uid"`
 	IsAdmin  bool   `json:"adm"`
 	jwt.RegisteredClaims
 }

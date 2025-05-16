@@ -6,6 +6,7 @@ import (
 
 	"github.com/Pineapple217/cvrs/pkg/ent"
 	"github.com/Pineapple217/cvrs/pkg/ent/user"
+	"github.com/Pineapple217/cvrs/pkg/pid"
 	"github.com/Pineapple217/cvrs/pkg/users"
 	"github.com/labstack/echo/v4"
 	"golang.org/x/crypto/bcrypt"
@@ -19,7 +20,7 @@ type loginRequest struct {
 type loginResponse struct {
 	IsAdmin  bool   `json:"isAdmin"`
 	Token    string `json:"token"`
-	Id       int    `json:"id"`
+	Id       pid.ID `json:"id"`
 	Username string `json:"username"`
 }
 
@@ -59,4 +60,19 @@ func (h *Handler) Login(c echo.Context) error {
 		Username: user.Username,
 	}
 	return c.JSON(http.StatusOK, resp)
+}
+
+func (h *Handler) Users(c echo.Context) error {
+	users, err := h.DB.Client.User.Query().
+		Select(
+			user.FieldID,
+			user.FieldUsername,
+			user.FieldIsAdmin,
+			user.FieldCreatedAt,
+		).
+		All(c.Request().Context())
+	if err != nil {
+		return err
+	}
+	return c.JSON(http.StatusOK, users)
 }

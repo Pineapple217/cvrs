@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"entgo.io/ent/dialect/sql"
+	"github.com/Pineapple217/cvrs/pkg/pid"
 )
 
 const (
@@ -53,6 +54,8 @@ var (
 	DefaultIsAdmin bool
 	// DefaultCreatedAt holds the default value on creation for the "created_at" field.
 	DefaultCreatedAt func() time.Time
+	// DefaultID holds the default value on creation for the "id" field.
+	DefaultID func() pid.ID
 )
 
 // OrderOption defines the ordering options for the User queries.
