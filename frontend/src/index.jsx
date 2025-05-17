@@ -8,18 +8,22 @@ import { Home } from "./pages/Home/index.jsx";
 import { NotFound } from "./pages/_404.jsx";
 import { Admin } from "./pages/Admin/index.jsx";
 import "./style.css";
+import { User } from "./pages/User/index.jsx";
 
 export function App() {
   return (
     <LocationProvider>
       <AuthProvider>
         <main>
-          <Router>
-            <Route path="/auth/login" component={Login} />
-            <Route path="/" component={Home} />
-            <Route path="/admin" component={Admin} />
-            <Route default component={NotFound} />
-          </Router>
+          <body>
+            <Router>
+              <Route path="/auth/login" component={Login} />
+              <Route path="/auth/user" component={User} />
+              <Route path="/" component={Home} />
+              <Route path="/admin" component={Admin} />
+              <Route default component={NotFound} />
+            </Router>
+          </body>
         </main>
       </AuthProvider>
     </LocationProvider>

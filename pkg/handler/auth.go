@@ -70,6 +70,7 @@ func (h *Handler) Users(c echo.Context) error {
 			user.FieldIsAdmin,
 			user.FieldCreatedAt,
 		).
+		Order(user.ByCreatedAt()).
 		All(c.Request().Context())
 	if err != nil {
 		return err
