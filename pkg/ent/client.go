@@ -15,7 +15,16 @@ import (
 	"entgo.io/ent"
 	"entgo.io/ent/dialect"
 	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
+	"github.com/Pineapple217/cvrs/pkg/ent/artist"
+	"github.com/Pineapple217/cvrs/pkg/ent/image"
+	"github.com/Pineapple217/cvrs/pkg/ent/release"
+	"github.com/Pineapple217/cvrs/pkg/ent/releaseappearance"
+	"github.com/Pineapple217/cvrs/pkg/ent/track"
+	"github.com/Pineapple217/cvrs/pkg/ent/trackappearance"
 	"github.com/Pineapple217/cvrs/pkg/ent/user"
+
+	stdsql "database/sql"
 )
 
 // Client is the client that holds all ent builders.
@@ -23,6 +32,18 @@ type Client struct {
 	config
 	// Schema is the client for creating, migrating and dropping schema.
 	Schema *migrate.Schema
+	// Artist is the client for interacting with the Artist builders.
+	Artist *ArtistClient
+	// Image is the client for interacting with the Image builders.
+	Image *ImageClient
+	// Release is the client for interacting with the Release builders.
+	Release *ReleaseClient
+	// ReleaseAppearance is the client for interacting with the ReleaseAppearance builders.
+	ReleaseAppearance *ReleaseAppearanceClient
+	// Track is the client for interacting with the Track builders.
+	Track *TrackClient
+	// TrackAppearance is the client for interacting with the TrackAppearance builders.
+	TrackAppearance *TrackAppearanceClient
 	// User is the client for interacting with the User builders.
 	User *UserClient
 }
@@ -36,6 +57,12 @@ func NewClient(opts ...Option) *Client {
 
 func (c *Client) init() {
 	c.Schema = migrate.NewSchema(c.driver)
+	c.Artist = NewArtistClient(c.config)
+	c.Image = NewImageClient(c.config)
+	c.Release = NewReleaseClient(c.config)
+	c.ReleaseAppearance = NewReleaseAppearanceClient(c.config)
+	c.Track = NewTrackClient(c.config)
+	c.TrackAppearance = NewTrackAppearanceClient(c.config)
 	c.User = NewUserClient(c.config)
 }
 
@@ -127,9 +154,15 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 	cfg := c.config
 	cfg.driver = tx
 	return &Tx{
-		ctx:    ctx,
-		config: cfg,
-		User:   NewUserClient(cfg),
+		ctx:               ctx,
+		config:            cfg,
+		Artist:            NewArtistClient(cfg),
+		Image:             NewImageClient(cfg),
+		Release:           NewReleaseClient(cfg),
+		ReleaseAppearance: NewReleaseAppearanceClient(cfg),
+		Track:             NewTrackClient(cfg),
+		TrackAppearance:   NewTrackAppearanceClient(cfg),
+		User:              NewUserClient(cfg),
 	}, nil
 }
 
@@ -147,16 +180,22 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 	cfg := c.config
 	cfg.driver = &txDriver{tx: tx, drv: c.driver}
 	return &Tx{
-		ctx:    ctx,
-		config: cfg,
-		User:   NewUserClient(cfg),
+		ctx:               ctx,
+		config:            cfg,
+		Artist:            NewArtistClient(cfg),
+		Image:             NewImageClient(cfg),
+		Release:           NewReleaseClient(cfg),
+		ReleaseAppearance: NewReleaseAppearanceClient(cfg),
+		Track:             NewTrackClient(cfg),
+		TrackAppearance:   NewTrackAppearanceClient(cfg),
+		User:              NewUserClient(cfg),
 	}, nil
 }
 
 // Debug returns a new debug-client. It's used to get verbose logging on specific operations.
 //
 //	client.Debug().
-//		User.
+//		Artist.
 //		Query().
 //		Count(ctx)
 func (c *Client) Debug() *Client {
@@ -178,22 +217,984 @@ func (c *Client) Close() error {
 // Use adds the mutation hooks to all the entity clients.
 // In order to add hooks to a specific client, call: `client.Node.Use(...)`.
 func (c *Client) Use(hooks ...Hook) {
-	c.User.Use(hooks...)
+	for _, n := range []interface{ Use(...Hook) }{
+		c.Artist, c.Image, c.Release, c.ReleaseAppearance, c.Track, c.TrackAppearance,
+		c.User,
+	} {
+		n.Use(hooks...)
+	}
 }
 
 // Intercept adds the query interceptors to all the entity clients.
 // In order to add interceptors to a specific client, call: `client.Node.Intercept(...)`.
 func (c *Client) Intercept(interceptors ...Interceptor) {
-	c.User.Intercept(interceptors...)
+	for _, n := range []interface{ Intercept(...Interceptor) }{
+		c.Artist, c.Image, c.Release, c.ReleaseAppearance, c.Track, c.TrackAppearance,
+		c.User,
+	} {
+		n.Intercept(interceptors...)
+	}
 }
 
 // Mutate implements the ent.Mutator interface.
 func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 	switch m := m.(type) {
+	case *ArtistMutation:
+		return c.Artist.mutate(ctx, m)
+	case *ImageMutation:
+		return c.Image.mutate(ctx, m)
+	case *ReleaseMutation:
+		return c.Release.mutate(ctx, m)
+	case *ReleaseAppearanceMutation:
+		return c.ReleaseAppearance.mutate(ctx, m)
+	case *TrackMutation:
+		return c.Track.mutate(ctx, m)
+	case *TrackAppearanceMutation:
+		return c.TrackAppearance.mutate(ctx, m)
 	case *UserMutation:
 		return c.User.mutate(ctx, m)
 	default:
 		return nil, fmt.Errorf("ent: unknown mutation type %T", m)
+	}
+}
+
+// ArtistClient is a client for the Artist schema.
+type ArtistClient struct {
+	config
+}
+
+// NewArtistClient returns a client for the Artist from the given config.
+func NewArtistClient(c config) *ArtistClient {
+	return &ArtistClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `artist.Hooks(f(g(h())))`.
+func (c *ArtistClient) Use(hooks ...Hook) {
+	c.hooks.Artist = append(c.hooks.Artist, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `artist.Intercept(f(g(h())))`.
+func (c *ArtistClient) Intercept(interceptors ...Interceptor) {
+	c.inters.Artist = append(c.inters.Artist, interceptors...)
+}
+
+// Create returns a builder for creating a Artist entity.
+func (c *ArtistClient) Create() *ArtistCreate {
+	mutation := newArtistMutation(c.config, OpCreate)
+	return &ArtistCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of Artist entities.
+func (c *ArtistClient) CreateBulk(builders ...*ArtistCreate) *ArtistCreateBulk {
+	return &ArtistCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *ArtistClient) MapCreateBulk(slice any, setFunc func(*ArtistCreate, int)) *ArtistCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &ArtistCreateBulk{err: fmt.Errorf("calling to ArtistClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*ArtistCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &ArtistCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for Artist.
+func (c *ArtistClient) Update() *ArtistUpdate {
+	mutation := newArtistMutation(c.config, OpUpdate)
+	return &ArtistUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *ArtistClient) UpdateOne(a *Artist) *ArtistUpdateOne {
+	mutation := newArtistMutation(c.config, OpUpdateOne, withArtist(a))
+	return &ArtistUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *ArtistClient) UpdateOneID(id pid.ID) *ArtistUpdateOne {
+	mutation := newArtistMutation(c.config, OpUpdateOne, withArtistID(id))
+	return &ArtistUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for Artist.
+func (c *ArtistClient) Delete() *ArtistDelete {
+	mutation := newArtistMutation(c.config, OpDelete)
+	return &ArtistDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *ArtistClient) DeleteOne(a *Artist) *ArtistDeleteOne {
+	return c.DeleteOneID(a.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *ArtistClient) DeleteOneID(id pid.ID) *ArtistDeleteOne {
+	builder := c.Delete().Where(artist.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &ArtistDeleteOne{builder}
+}
+
+// Query returns a query builder for Artist.
+func (c *ArtistClient) Query() *ArtistQuery {
+	return &ArtistQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeArtist},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a Artist entity by its id.
+func (c *ArtistClient) Get(ctx context.Context, id pid.ID) (*Artist, error) {
+	return c.Query().Where(artist.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *ArtistClient) GetX(ctx context.Context, id pid.ID) *Artist {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryAppearingTracks queries the appearing_tracks edge of a Artist.
+func (c *ArtistClient) QueryAppearingTracks(a *Artist) *TrackQuery {
+	query := (&TrackClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := a.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(artist.Table, artist.FieldID, id),
+			sqlgraph.To(track.Table, track.FieldID),
+			sqlgraph.Edge(sqlgraph.M2M, false, artist.AppearingTracksTable, artist.AppearingTracksPrimaryKey...),
+		)
+		fromV = sqlgraph.Neighbors(a.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryAppearingReleases queries the appearing_releases edge of a Artist.
+func (c *ArtistClient) QueryAppearingReleases(a *Artist) *ReleaseQuery {
+	query := (&ReleaseClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := a.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(artist.Table, artist.FieldID, id),
+			sqlgraph.To(release.Table, release.FieldID),
+			sqlgraph.Edge(sqlgraph.M2M, false, artist.AppearingReleasesTable, artist.AppearingReleasesPrimaryKey...),
+		)
+		fromV = sqlgraph.Neighbors(a.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryTrackAppearance queries the track_appearance edge of a Artist.
+func (c *ArtistClient) QueryTrackAppearance(a *Artist) *TrackAppearanceQuery {
+	query := (&TrackAppearanceClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := a.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(artist.Table, artist.FieldID, id),
+			sqlgraph.To(trackappearance.Table, trackappearance.ArtistColumn),
+			sqlgraph.Edge(sqlgraph.O2M, true, artist.TrackAppearanceTable, artist.TrackAppearanceColumn),
+		)
+		fromV = sqlgraph.Neighbors(a.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryReleaseAppearance queries the release_appearance edge of a Artist.
+func (c *ArtistClient) QueryReleaseAppearance(a *Artist) *ReleaseAppearanceQuery {
+	query := (&ReleaseAppearanceClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := a.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(artist.Table, artist.FieldID, id),
+			sqlgraph.To(releaseappearance.Table, releaseappearance.ArtistColumn),
+			sqlgraph.Edge(sqlgraph.O2M, true, artist.ReleaseAppearanceTable, artist.ReleaseAppearanceColumn),
+		)
+		fromV = sqlgraph.Neighbors(a.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *ArtistClient) Hooks() []Hook {
+	return c.hooks.Artist
+}
+
+// Interceptors returns the client interceptors.
+func (c *ArtistClient) Interceptors() []Interceptor {
+	return c.inters.Artist
+}
+
+func (c *ArtistClient) mutate(ctx context.Context, m *ArtistMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&ArtistCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&ArtistUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&ArtistUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&ArtistDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown Artist mutation op: %q", m.Op())
+	}
+}
+
+// ImageClient is a client for the Image schema.
+type ImageClient struct {
+	config
+}
+
+// NewImageClient returns a client for the Image from the given config.
+func NewImageClient(c config) *ImageClient {
+	return &ImageClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `image.Hooks(f(g(h())))`.
+func (c *ImageClient) Use(hooks ...Hook) {
+	c.hooks.Image = append(c.hooks.Image, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `image.Intercept(f(g(h())))`.
+func (c *ImageClient) Intercept(interceptors ...Interceptor) {
+	c.inters.Image = append(c.inters.Image, interceptors...)
+}
+
+// Create returns a builder for creating a Image entity.
+func (c *ImageClient) Create() *ImageCreate {
+	mutation := newImageMutation(c.config, OpCreate)
+	return &ImageCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of Image entities.
+func (c *ImageClient) CreateBulk(builders ...*ImageCreate) *ImageCreateBulk {
+	return &ImageCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *ImageClient) MapCreateBulk(slice any, setFunc func(*ImageCreate, int)) *ImageCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &ImageCreateBulk{err: fmt.Errorf("calling to ImageClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*ImageCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &ImageCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for Image.
+func (c *ImageClient) Update() *ImageUpdate {
+	mutation := newImageMutation(c.config, OpUpdate)
+	return &ImageUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *ImageClient) UpdateOne(i *Image) *ImageUpdateOne {
+	mutation := newImageMutation(c.config, OpUpdateOne, withImage(i))
+	return &ImageUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *ImageClient) UpdateOneID(id pid.ID) *ImageUpdateOne {
+	mutation := newImageMutation(c.config, OpUpdateOne, withImageID(id))
+	return &ImageUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for Image.
+func (c *ImageClient) Delete() *ImageDelete {
+	mutation := newImageMutation(c.config, OpDelete)
+	return &ImageDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *ImageClient) DeleteOne(i *Image) *ImageDeleteOne {
+	return c.DeleteOneID(i.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *ImageClient) DeleteOneID(id pid.ID) *ImageDeleteOne {
+	builder := c.Delete().Where(image.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &ImageDeleteOne{builder}
+}
+
+// Query returns a query builder for Image.
+func (c *ImageClient) Query() *ImageQuery {
+	return &ImageQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeImage},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a Image entity by its id.
+func (c *ImageClient) Get(ctx context.Context, id pid.ID) (*Image, error) {
+	return c.Query().Where(image.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *ImageClient) GetX(ctx context.Context, id pid.ID) *Image {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryRelease queries the release edge of a Image.
+func (c *ImageClient) QueryRelease(i *Image) *ReleaseQuery {
+	query := (&ReleaseClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := i.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(image.Table, image.FieldID, id),
+			sqlgraph.To(release.Table, release.FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, true, image.ReleaseTable, image.ReleaseColumn),
+		)
+		fromV = sqlgraph.Neighbors(i.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryUploader queries the uploader edge of a Image.
+func (c *ImageClient) QueryUploader(i *Image) *UserQuery {
+	query := (&UserClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := i.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(image.Table, image.FieldID, id),
+			sqlgraph.To(user.Table, user.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, image.UploaderTable, image.UploaderColumn),
+		)
+		fromV = sqlgraph.Neighbors(i.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *ImageClient) Hooks() []Hook {
+	return c.hooks.Image
+}
+
+// Interceptors returns the client interceptors.
+func (c *ImageClient) Interceptors() []Interceptor {
+	return c.inters.Image
+}
+
+func (c *ImageClient) mutate(ctx context.Context, m *ImageMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&ImageCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&ImageUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&ImageUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&ImageDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown Image mutation op: %q", m.Op())
+	}
+}
+
+// ReleaseClient is a client for the Release schema.
+type ReleaseClient struct {
+	config
+}
+
+// NewReleaseClient returns a client for the Release from the given config.
+func NewReleaseClient(c config) *ReleaseClient {
+	return &ReleaseClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `release.Hooks(f(g(h())))`.
+func (c *ReleaseClient) Use(hooks ...Hook) {
+	c.hooks.Release = append(c.hooks.Release, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `release.Intercept(f(g(h())))`.
+func (c *ReleaseClient) Intercept(interceptors ...Interceptor) {
+	c.inters.Release = append(c.inters.Release, interceptors...)
+}
+
+// Create returns a builder for creating a Release entity.
+func (c *ReleaseClient) Create() *ReleaseCreate {
+	mutation := newReleaseMutation(c.config, OpCreate)
+	return &ReleaseCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of Release entities.
+func (c *ReleaseClient) CreateBulk(builders ...*ReleaseCreate) *ReleaseCreateBulk {
+	return &ReleaseCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *ReleaseClient) MapCreateBulk(slice any, setFunc func(*ReleaseCreate, int)) *ReleaseCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &ReleaseCreateBulk{err: fmt.Errorf("calling to ReleaseClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*ReleaseCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &ReleaseCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for Release.
+func (c *ReleaseClient) Update() *ReleaseUpdate {
+	mutation := newReleaseMutation(c.config, OpUpdate)
+	return &ReleaseUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *ReleaseClient) UpdateOne(r *Release) *ReleaseUpdateOne {
+	mutation := newReleaseMutation(c.config, OpUpdateOne, withRelease(r))
+	return &ReleaseUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *ReleaseClient) UpdateOneID(id pid.ID) *ReleaseUpdateOne {
+	mutation := newReleaseMutation(c.config, OpUpdateOne, withReleaseID(id))
+	return &ReleaseUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for Release.
+func (c *ReleaseClient) Delete() *ReleaseDelete {
+	mutation := newReleaseMutation(c.config, OpDelete)
+	return &ReleaseDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *ReleaseClient) DeleteOne(r *Release) *ReleaseDeleteOne {
+	return c.DeleteOneID(r.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *ReleaseClient) DeleteOneID(id pid.ID) *ReleaseDeleteOne {
+	builder := c.Delete().Where(release.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &ReleaseDeleteOne{builder}
+}
+
+// Query returns a query builder for Release.
+func (c *ReleaseClient) Query() *ReleaseQuery {
+	return &ReleaseQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeRelease},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a Release entity by its id.
+func (c *ReleaseClient) Get(ctx context.Context, id pid.ID) (*Release, error) {
+	return c.Query().Where(release.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *ReleaseClient) GetX(ctx context.Context, id pid.ID) *Release {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryImage queries the image edge of a Release.
+func (c *ReleaseClient) QueryImage(r *Release) *ImageQuery {
+	query := (&ImageClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := r.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(release.Table, release.FieldID, id),
+			sqlgraph.To(image.Table, image.FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, false, release.ImageTable, release.ImageColumn),
+		)
+		fromV = sqlgraph.Neighbors(r.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryAppearingArtists queries the appearing_artists edge of a Release.
+func (c *ReleaseClient) QueryAppearingArtists(r *Release) *ArtistQuery {
+	query := (&ArtistClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := r.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(release.Table, release.FieldID, id),
+			sqlgraph.To(artist.Table, artist.FieldID),
+			sqlgraph.Edge(sqlgraph.M2M, true, release.AppearingArtistsTable, release.AppearingArtistsPrimaryKey...),
+		)
+		fromV = sqlgraph.Neighbors(r.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryReleaseAppearance queries the release_appearance edge of a Release.
+func (c *ReleaseClient) QueryReleaseAppearance(r *Release) *ReleaseAppearanceQuery {
+	query := (&ReleaseAppearanceClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := r.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(release.Table, release.FieldID, id),
+			sqlgraph.To(releaseappearance.Table, releaseappearance.ReleaseColumn),
+			sqlgraph.Edge(sqlgraph.O2M, true, release.ReleaseAppearanceTable, release.ReleaseAppearanceColumn),
+		)
+		fromV = sqlgraph.Neighbors(r.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *ReleaseClient) Hooks() []Hook {
+	return c.hooks.Release
+}
+
+// Interceptors returns the client interceptors.
+func (c *ReleaseClient) Interceptors() []Interceptor {
+	return c.inters.Release
+}
+
+func (c *ReleaseClient) mutate(ctx context.Context, m *ReleaseMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&ReleaseCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&ReleaseUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&ReleaseUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&ReleaseDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown Release mutation op: %q", m.Op())
+	}
+}
+
+// ReleaseAppearanceClient is a client for the ReleaseAppearance schema.
+type ReleaseAppearanceClient struct {
+	config
+}
+
+// NewReleaseAppearanceClient returns a client for the ReleaseAppearance from the given config.
+func NewReleaseAppearanceClient(c config) *ReleaseAppearanceClient {
+	return &ReleaseAppearanceClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `releaseappearance.Hooks(f(g(h())))`.
+func (c *ReleaseAppearanceClient) Use(hooks ...Hook) {
+	c.hooks.ReleaseAppearance = append(c.hooks.ReleaseAppearance, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `releaseappearance.Intercept(f(g(h())))`.
+func (c *ReleaseAppearanceClient) Intercept(interceptors ...Interceptor) {
+	c.inters.ReleaseAppearance = append(c.inters.ReleaseAppearance, interceptors...)
+}
+
+// Create returns a builder for creating a ReleaseAppearance entity.
+func (c *ReleaseAppearanceClient) Create() *ReleaseAppearanceCreate {
+	mutation := newReleaseAppearanceMutation(c.config, OpCreate)
+	return &ReleaseAppearanceCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of ReleaseAppearance entities.
+func (c *ReleaseAppearanceClient) CreateBulk(builders ...*ReleaseAppearanceCreate) *ReleaseAppearanceCreateBulk {
+	return &ReleaseAppearanceCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *ReleaseAppearanceClient) MapCreateBulk(slice any, setFunc func(*ReleaseAppearanceCreate, int)) *ReleaseAppearanceCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &ReleaseAppearanceCreateBulk{err: fmt.Errorf("calling to ReleaseAppearanceClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*ReleaseAppearanceCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &ReleaseAppearanceCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for ReleaseAppearance.
+func (c *ReleaseAppearanceClient) Update() *ReleaseAppearanceUpdate {
+	mutation := newReleaseAppearanceMutation(c.config, OpUpdate)
+	return &ReleaseAppearanceUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *ReleaseAppearanceClient) UpdateOne(ra *ReleaseAppearance) *ReleaseAppearanceUpdateOne {
+	mutation := newReleaseAppearanceMutation(c.config, OpUpdateOne)
+	mutation.artist = &ra.ArtistID
+	mutation.release = &ra.ReleaseID
+	return &ReleaseAppearanceUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for ReleaseAppearance.
+func (c *ReleaseAppearanceClient) Delete() *ReleaseAppearanceDelete {
+	mutation := newReleaseAppearanceMutation(c.config, OpDelete)
+	return &ReleaseAppearanceDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Query returns a query builder for ReleaseAppearance.
+func (c *ReleaseAppearanceClient) Query() *ReleaseAppearanceQuery {
+	return &ReleaseAppearanceQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeReleaseAppearance},
+		inters: c.Interceptors(),
+	}
+}
+
+// QueryArtist queries the artist edge of a ReleaseAppearance.
+func (c *ReleaseAppearanceClient) QueryArtist(ra *ReleaseAppearance) *ArtistQuery {
+	return c.Query().
+		Where(releaseappearance.ArtistID(ra.ArtistID), releaseappearance.ReleaseID(ra.ReleaseID)).
+		QueryArtist()
+}
+
+// QueryRelease queries the release edge of a ReleaseAppearance.
+func (c *ReleaseAppearanceClient) QueryRelease(ra *ReleaseAppearance) *ReleaseQuery {
+	return c.Query().
+		Where(releaseappearance.ArtistID(ra.ArtistID), releaseappearance.ReleaseID(ra.ReleaseID)).
+		QueryRelease()
+}
+
+// Hooks returns the client hooks.
+func (c *ReleaseAppearanceClient) Hooks() []Hook {
+	return c.hooks.ReleaseAppearance
+}
+
+// Interceptors returns the client interceptors.
+func (c *ReleaseAppearanceClient) Interceptors() []Interceptor {
+	return c.inters.ReleaseAppearance
+}
+
+func (c *ReleaseAppearanceClient) mutate(ctx context.Context, m *ReleaseAppearanceMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&ReleaseAppearanceCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&ReleaseAppearanceUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&ReleaseAppearanceUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&ReleaseAppearanceDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown ReleaseAppearance mutation op: %q", m.Op())
+	}
+}
+
+// TrackClient is a client for the Track schema.
+type TrackClient struct {
+	config
+}
+
+// NewTrackClient returns a client for the Track from the given config.
+func NewTrackClient(c config) *TrackClient {
+	return &TrackClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `track.Hooks(f(g(h())))`.
+func (c *TrackClient) Use(hooks ...Hook) {
+	c.hooks.Track = append(c.hooks.Track, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `track.Intercept(f(g(h())))`.
+func (c *TrackClient) Intercept(interceptors ...Interceptor) {
+	c.inters.Track = append(c.inters.Track, interceptors...)
+}
+
+// Create returns a builder for creating a Track entity.
+func (c *TrackClient) Create() *TrackCreate {
+	mutation := newTrackMutation(c.config, OpCreate)
+	return &TrackCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of Track entities.
+func (c *TrackClient) CreateBulk(builders ...*TrackCreate) *TrackCreateBulk {
+	return &TrackCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *TrackClient) MapCreateBulk(slice any, setFunc func(*TrackCreate, int)) *TrackCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &TrackCreateBulk{err: fmt.Errorf("calling to TrackClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*TrackCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &TrackCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for Track.
+func (c *TrackClient) Update() *TrackUpdate {
+	mutation := newTrackMutation(c.config, OpUpdate)
+	return &TrackUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *TrackClient) UpdateOne(t *Track) *TrackUpdateOne {
+	mutation := newTrackMutation(c.config, OpUpdateOne, withTrack(t))
+	return &TrackUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *TrackClient) UpdateOneID(id pid.ID) *TrackUpdateOne {
+	mutation := newTrackMutation(c.config, OpUpdateOne, withTrackID(id))
+	return &TrackUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for Track.
+func (c *TrackClient) Delete() *TrackDelete {
+	mutation := newTrackMutation(c.config, OpDelete)
+	return &TrackDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *TrackClient) DeleteOne(t *Track) *TrackDeleteOne {
+	return c.DeleteOneID(t.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *TrackClient) DeleteOneID(id pid.ID) *TrackDeleteOne {
+	builder := c.Delete().Where(track.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &TrackDeleteOne{builder}
+}
+
+// Query returns a query builder for Track.
+func (c *TrackClient) Query() *TrackQuery {
+	return &TrackQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeTrack},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a Track entity by its id.
+func (c *TrackClient) Get(ctx context.Context, id pid.ID) (*Track, error) {
+	return c.Query().Where(track.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *TrackClient) GetX(ctx context.Context, id pid.ID) *Track {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryAppearingArtists queries the appearing_artists edge of a Track.
+func (c *TrackClient) QueryAppearingArtists(t *Track) *ArtistQuery {
+	query := (&ArtistClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := t.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(track.Table, track.FieldID, id),
+			sqlgraph.To(artist.Table, artist.FieldID),
+			sqlgraph.Edge(sqlgraph.M2M, true, track.AppearingArtistsTable, track.AppearingArtistsPrimaryKey...),
+		)
+		fromV = sqlgraph.Neighbors(t.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryAppearance queries the appearance edge of a Track.
+func (c *TrackClient) QueryAppearance(t *Track) *TrackAppearanceQuery {
+	query := (&TrackAppearanceClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := t.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(track.Table, track.FieldID, id),
+			sqlgraph.To(trackappearance.Table, trackappearance.TrackColumn),
+			sqlgraph.Edge(sqlgraph.O2M, true, track.AppearanceTable, track.AppearanceColumn),
+		)
+		fromV = sqlgraph.Neighbors(t.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *TrackClient) Hooks() []Hook {
+	return c.hooks.Track
+}
+
+// Interceptors returns the client interceptors.
+func (c *TrackClient) Interceptors() []Interceptor {
+	return c.inters.Track
+}
+
+func (c *TrackClient) mutate(ctx context.Context, m *TrackMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&TrackCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&TrackUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&TrackUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&TrackDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown Track mutation op: %q", m.Op())
+	}
+}
+
+// TrackAppearanceClient is a client for the TrackAppearance schema.
+type TrackAppearanceClient struct {
+	config
+}
+
+// NewTrackAppearanceClient returns a client for the TrackAppearance from the given config.
+func NewTrackAppearanceClient(c config) *TrackAppearanceClient {
+	return &TrackAppearanceClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `trackappearance.Hooks(f(g(h())))`.
+func (c *TrackAppearanceClient) Use(hooks ...Hook) {
+	c.hooks.TrackAppearance = append(c.hooks.TrackAppearance, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `trackappearance.Intercept(f(g(h())))`.
+func (c *TrackAppearanceClient) Intercept(interceptors ...Interceptor) {
+	c.inters.TrackAppearance = append(c.inters.TrackAppearance, interceptors...)
+}
+
+// Create returns a builder for creating a TrackAppearance entity.
+func (c *TrackAppearanceClient) Create() *TrackAppearanceCreate {
+	mutation := newTrackAppearanceMutation(c.config, OpCreate)
+	return &TrackAppearanceCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of TrackAppearance entities.
+func (c *TrackAppearanceClient) CreateBulk(builders ...*TrackAppearanceCreate) *TrackAppearanceCreateBulk {
+	return &TrackAppearanceCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *TrackAppearanceClient) MapCreateBulk(slice any, setFunc func(*TrackAppearanceCreate, int)) *TrackAppearanceCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &TrackAppearanceCreateBulk{err: fmt.Errorf("calling to TrackAppearanceClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*TrackAppearanceCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &TrackAppearanceCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for TrackAppearance.
+func (c *TrackAppearanceClient) Update() *TrackAppearanceUpdate {
+	mutation := newTrackAppearanceMutation(c.config, OpUpdate)
+	return &TrackAppearanceUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *TrackAppearanceClient) UpdateOne(ta *TrackAppearance) *TrackAppearanceUpdateOne {
+	mutation := newTrackAppearanceMutation(c.config, OpUpdateOne)
+	mutation.artist = &ta.ArtistID
+	mutation.track = &ta.TrackID
+	return &TrackAppearanceUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for TrackAppearance.
+func (c *TrackAppearanceClient) Delete() *TrackAppearanceDelete {
+	mutation := newTrackAppearanceMutation(c.config, OpDelete)
+	return &TrackAppearanceDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Query returns a query builder for TrackAppearance.
+func (c *TrackAppearanceClient) Query() *TrackAppearanceQuery {
+	return &TrackAppearanceQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeTrackAppearance},
+		inters: c.Interceptors(),
+	}
+}
+
+// QueryArtist queries the artist edge of a TrackAppearance.
+func (c *TrackAppearanceClient) QueryArtist(ta *TrackAppearance) *ArtistQuery {
+	return c.Query().
+		Where(trackappearance.ArtistID(ta.ArtistID), trackappearance.TrackID(ta.TrackID)).
+		QueryArtist()
+}
+
+// QueryTrack queries the track edge of a TrackAppearance.
+func (c *TrackAppearanceClient) QueryTrack(ta *TrackAppearance) *TrackQuery {
+	return c.Query().
+		Where(trackappearance.ArtistID(ta.ArtistID), trackappearance.TrackID(ta.TrackID)).
+		QueryTrack()
+}
+
+// Hooks returns the client hooks.
+func (c *TrackAppearanceClient) Hooks() []Hook {
+	return c.hooks.TrackAppearance
+}
+
+// Interceptors returns the client interceptors.
+func (c *TrackAppearanceClient) Interceptors() []Interceptor {
+	return c.inters.TrackAppearance
+}
+
+func (c *TrackAppearanceClient) mutate(ctx context.Context, m *TrackAppearanceMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&TrackAppearanceCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&TrackAppearanceUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&TrackAppearanceUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&TrackAppearanceDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown TrackAppearance mutation op: %q", m.Op())
 	}
 }
 
@@ -305,6 +1306,22 @@ func (c *UserClient) GetX(ctx context.Context, id pid.ID) *User {
 	return obj
 }
 
+// QueryImages queries the images edge of a User.
+func (c *UserClient) QueryImages(u *User) *ImageQuery {
+	query := (&ImageClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := u.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(user.Table, user.FieldID, id),
+			sqlgraph.To(image.Table, image.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, user.ImagesTable, user.ImagesColumn),
+		)
+		fromV = sqlgraph.Neighbors(u.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // Hooks returns the client hooks.
 func (c *UserClient) Hooks() []Hook {
 	return c.hooks.User
@@ -333,9 +1350,35 @@ func (c *UserClient) mutate(ctx context.Context, m *UserMutation) (Value, error)
 // hooks and interceptors per client, for fast access.
 type (
 	hooks struct {
+		Artist, Image, Release, ReleaseAppearance, Track, TrackAppearance,
 		User []ent.Hook
 	}
 	inters struct {
+		Artist, Image, Release, ReleaseAppearance, Track, TrackAppearance,
 		User []ent.Interceptor
 	}
 )
+
+// ExecContext allows calling the underlying ExecContext method of the driver if it is supported by it.
+// See, database/sql#DB.ExecContext for more information.
+func (c *config) ExecContext(ctx context.Context, query string, args ...any) (stdsql.Result, error) {
+	ex, ok := c.driver.(interface {
+		ExecContext(context.Context, string, ...any) (stdsql.Result, error)
+	})
+	if !ok {
+		return nil, fmt.Errorf("Driver.ExecContext is not supported")
+	}
+	return ex.ExecContext(ctx, query, args...)
+}
+
+// QueryContext allows calling the underlying QueryContext method of the driver if it is supported by it.
+// See, database/sql#DB.QueryContext for more information.
+func (c *config) QueryContext(ctx context.Context, query string, args ...any) (*stdsql.Rows, error) {
+	q, ok := c.driver.(interface {
+		QueryContext(context.Context, string, ...any) (*stdsql.Rows, error)
+	})
+	if !ok {
+		return nil, fmt.Errorf("Driver.QueryContext is not supported")
+	}
+	return q.QueryContext(ctx, query, args...)
+}

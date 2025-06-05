@@ -15,6 +15,9 @@ func main() {
 		Hooks: []gen.Hook{
 			addBoolOmitempty(),
 		},
+		Features: []gen.Feature{
+			gen.FeatureExecQuery,
+		},
 	}); err != nil {
 		log.Fatalf("running ent codegen: %v", err)
 	}

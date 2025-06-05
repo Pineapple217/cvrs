@@ -5,10 +5,12 @@ import (
 	"log/slog"
 	"os"
 	"os/signal"
+	"runtime/pprof"
 
 	"github.com/Pineapple217/cvrs/pkg/database"
 	"github.com/Pineapple217/cvrs/pkg/handler"
 	"github.com/Pineapple217/cvrs/pkg/server"
+	"github.com/Pineapple217/cvrs/pkg/sources"
 	"github.com/Pineapple217/cvrs/pkg/users"
 	"github.com/Pineapple217/cvrs/pkg/util"
 	"github.com/spf13/cobra"
@@ -24,6 +26,11 @@ const bannerTemplate = `
 
 https://github.com/Pineapple217/cvrs
 -----------------------------------------------------------------------------`
+
+var (
+	enableProfile bool
+	profFile      *os.File
+)
 
 func main() {
 	slog.SetDefault(slog.New(slog.Default().Handler()))
@@ -53,10 +60,36 @@ func main() {
 			server.Stop()
 		},
 	}
+	var rootCmd = &cobra.Command{
+		Use:     "cvrs",
+		Version: version,
+		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+			if enableProfile {
+				slog.Info("Running with cpu profiler")
+				var err error
+				profFile, err = os.Create("cpu.prof")
+				if err != nil {
+					return fmt.Errorf("could not create CPU profile: %w", err)
+				}
+				pprof.StartCPUProfile(profFile)
+			}
+			return nil
+		},
+		PersistentPostRun: func(cmd *cobra.Command, args []string) {
+			if enableProfile && profFile != nil {
+				pprof.StopCPUProfile()
+				profFile.Close()
+				slog.Debug("CPU profile saved", "file", "cpu.prof")
+			}
+		},
+	}
+	rootCmd.PersistentFlags().BoolVar(&enableProfile, "profile", false, "Enable CPU profiling and write to cpu.prof")
 
-	var rootCmd = &cobra.Command{Use: "cvrs"}
-	rootCmd.Version = version
 	rootCmd.AddCommand(cmdRun)
 	rootCmd.AddCommand(users.GetCmd())
-	rootCmd.Execute()
+	rootCmd.AddCommand(sources.GetCmd())
+	if err := rootCmd.Execute(); err != nil {
+		slog.Error("Command execution failed", "error", err)
+		os.Exit(1)
+	}
 }

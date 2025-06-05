@@ -5,7 +5,13 @@ package ent
 import (
 	"time"
 
+	"github.com/Pineapple217/cvrs/pkg/ent/artist"
+	"github.com/Pineapple217/cvrs/pkg/ent/image"
+	"github.com/Pineapple217/cvrs/pkg/ent/release"
+	"github.com/Pineapple217/cvrs/pkg/ent/releaseappearance"
 	"github.com/Pineapple217/cvrs/pkg/ent/schema"
+	"github.com/Pineapple217/cvrs/pkg/ent/track"
+	"github.com/Pineapple217/cvrs/pkg/ent/trackappearance"
 	"github.com/Pineapple217/cvrs/pkg/ent/user"
 	"github.com/Pineapple217/cvrs/pkg/pid"
 )
@@ -14,6 +20,96 @@ import (
 // (default values, validators, hooks and policies) and stitches it
 // to their package variables.
 func init() {
+	artistMixin := schema.Artist{}.Mixin()
+	artistMixinFields0 := artistMixin[0].Fields()
+	_ = artistMixinFields0
+	artistFields := schema.Artist{}.Fields()
+	_ = artistFields
+	// artistDescName is the schema descriptor for name field.
+	artistDescName := artistFields[0].Descriptor()
+	// artist.NameValidator is a validator for the "name" field. It is called by the builders before save.
+	artist.NameValidator = artistDescName.Validators[0].(func(string) error)
+	// artistDescID is the schema descriptor for id field.
+	artistDescID := artistMixinFields0[0].Descriptor()
+	// artist.DefaultID holds the default value on creation for the id field.
+	artist.DefaultID = artistDescID.Default.(func() pid.ID)
+	imageMixin := schema.Image{}.Mixin()
+	imageMixinFields0 := imageMixin[0].Fields()
+	_ = imageMixinFields0
+	imageFields := schema.Image{}.Fields()
+	_ = imageFields
+	// imageDescFile is the schema descriptor for file field.
+	imageDescFile := imageFields[0].Descriptor()
+	// image.FileValidator is a validator for the "file" field. It is called by the builders before save.
+	image.FileValidator = imageDescFile.Validators[0].(func(string) error)
+	// imageDescCreatedAt is the schema descriptor for created_at field.
+	imageDescCreatedAt := imageFields[5].Descriptor()
+	// image.DefaultCreatedAt holds the default value on creation for the created_at field.
+	image.DefaultCreatedAt = imageDescCreatedAt.Default.(func() time.Time)
+	// imageDescUpdatedAt is the schema descriptor for updated_at field.
+	imageDescUpdatedAt := imageFields[6].Descriptor()
+	// image.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	image.DefaultUpdatedAt = imageDescUpdatedAt.Default.(func() time.Time)
+	// image.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	image.UpdateDefaultUpdatedAt = imageDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// imageDescID is the schema descriptor for id field.
+	imageDescID := imageMixinFields0[0].Descriptor()
+	// image.DefaultID holds the default value on creation for the id field.
+	image.DefaultID = imageDescID.Default.(func() pid.ID)
+	releaseMixin := schema.Release{}.Mixin()
+	releaseMixinFields0 := releaseMixin[0].Fields()
+	_ = releaseMixinFields0
+	releaseFields := schema.Release{}.Fields()
+	_ = releaseFields
+	// releaseDescName is the schema descriptor for name field.
+	releaseDescName := releaseFields[0].Descriptor()
+	// release.NameValidator is a validator for the "name" field. It is called by the builders before save.
+	release.NameValidator = releaseDescName.Validators[0].(func(string) error)
+	// releaseDescID is the schema descriptor for id field.
+	releaseDescID := releaseMixinFields0[0].Descriptor()
+	// release.DefaultID holds the default value on creation for the id field.
+	release.DefaultID = releaseDescID.Default.(func() pid.ID)
+	releaseappearanceFields := schema.ReleaseAppearance{}.Fields()
+	_ = releaseappearanceFields
+	// releaseappearanceDescReleaseID is the schema descriptor for release_id field.
+	releaseappearanceDescReleaseID := releaseappearanceFields[0].Descriptor()
+	// releaseappearance.DefaultReleaseID holds the default value on creation for the release_id field.
+	releaseappearance.DefaultReleaseID = releaseappearanceDescReleaseID.Default.(func() pid.ID)
+	// releaseappearanceDescArtistID is the schema descriptor for artist_id field.
+	releaseappearanceDescArtistID := releaseappearanceFields[1].Descriptor()
+	// releaseappearance.DefaultArtistID holds the default value on creation for the artist_id field.
+	releaseappearance.DefaultArtistID = releaseappearanceDescArtistID.Default.(func() pid.ID)
+	// releaseappearanceDescOrder is the schema descriptor for order field.
+	releaseappearanceDescOrder := releaseappearanceFields[2].Descriptor()
+	// releaseappearance.OrderValidator is a validator for the "order" field. It is called by the builders before save.
+	releaseappearance.OrderValidator = releaseappearanceDescOrder.Validators[0].(func(int) error)
+	trackMixin := schema.Track{}.Mixin()
+	trackMixinFields0 := trackMixin[0].Fields()
+	_ = trackMixinFields0
+	trackFields := schema.Track{}.Fields()
+	_ = trackFields
+	// trackDescTitle is the schema descriptor for title field.
+	trackDescTitle := trackFields[0].Descriptor()
+	// track.TitleValidator is a validator for the "title" field. It is called by the builders before save.
+	track.TitleValidator = trackDescTitle.Validators[0].(func(string) error)
+	// trackDescID is the schema descriptor for id field.
+	trackDescID := trackMixinFields0[0].Descriptor()
+	// track.DefaultID holds the default value on creation for the id field.
+	track.DefaultID = trackDescID.Default.(func() pid.ID)
+	trackappearanceFields := schema.TrackAppearance{}.Fields()
+	_ = trackappearanceFields
+	// trackappearanceDescTrackID is the schema descriptor for track_id field.
+	trackappearanceDescTrackID := trackappearanceFields[0].Descriptor()
+	// trackappearance.DefaultTrackID holds the default value on creation for the track_id field.
+	trackappearance.DefaultTrackID = trackappearanceDescTrackID.Default.(func() pid.ID)
+	// trackappearanceDescArtistID is the schema descriptor for artist_id field.
+	trackappearanceDescArtistID := trackappearanceFields[1].Descriptor()
+	// trackappearance.DefaultArtistID holds the default value on creation for the artist_id field.
+	trackappearance.DefaultArtistID = trackappearanceDescArtistID.Default.(func() pid.ID)
+	// trackappearanceDescOrder is the schema descriptor for order field.
+	trackappearanceDescOrder := trackappearanceFields[2].Descriptor()
+	// trackappearance.OrderValidator is a validator for the "order" field. It is called by the builders before save.
+	trackappearance.OrderValidator = trackappearanceDescOrder.Validators[0].(func(int) error)
 	userMixin := schema.User{}.Mixin()
 	userMixinFields0 := userMixin[0].Fields()
 	_ = userMixinFields0

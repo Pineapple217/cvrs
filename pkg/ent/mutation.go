@@ -11,9 +11,16 @@ import (
 
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
+	"github.com/Pineapple217/cvrs/pkg/ent/artist"
+	"github.com/Pineapple217/cvrs/pkg/ent/image"
 	"github.com/Pineapple217/cvrs/pkg/ent/predicate"
+	"github.com/Pineapple217/cvrs/pkg/ent/release"
+	"github.com/Pineapple217/cvrs/pkg/ent/releaseappearance"
+	"github.com/Pineapple217/cvrs/pkg/ent/track"
+	"github.com/Pineapple217/cvrs/pkg/ent/trackappearance"
 	"github.com/Pineapple217/cvrs/pkg/ent/user"
 	"github.com/Pineapple217/cvrs/pkg/pid"
+	"github.com/google/uuid"
 )
 
 const (
@@ -25,8 +32,3390 @@ const (
 	OpUpdateOne = ent.OpUpdateOne
 
 	// Node types.
-	TypeUser = "User"
+	TypeArtist            = "Artist"
+	TypeImage             = "Image"
+	TypeRelease           = "Release"
+	TypeReleaseAppearance = "ReleaseAppearance"
+	TypeTrack             = "Track"
+	TypeTrackAppearance   = "TrackAppearance"
+	TypeUser              = "User"
 )
+
+// ArtistMutation represents an operation that mutates the Artist nodes in the graph.
+type ArtistMutation struct {
+	config
+	op                        Op
+	typ                       string
+	id                        *pid.ID
+	name                      *string
+	mbid                      *uuid.UUID
+	clearedFields             map[string]struct{}
+	appearing_tracks          map[pid.ID]struct{}
+	removedappearing_tracks   map[pid.ID]struct{}
+	clearedappearing_tracks   bool
+	appearing_releases        map[pid.ID]struct{}
+	removedappearing_releases map[pid.ID]struct{}
+	clearedappearing_releases bool
+	done                      bool
+	oldValue                  func(context.Context) (*Artist, error)
+	predicates                []predicate.Artist
+}
+
+var _ ent.Mutation = (*ArtistMutation)(nil)
+
+// artistOption allows management of the mutation configuration using functional options.
+type artistOption func(*ArtistMutation)
+
+// newArtistMutation creates new mutation for the Artist entity.
+func newArtistMutation(c config, op Op, opts ...artistOption) *ArtistMutation {
+	m := &ArtistMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeArtist,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withArtistID sets the ID field of the mutation.
+func withArtistID(id pid.ID) artistOption {
+	return func(m *ArtistMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *Artist
+		)
+		m.oldValue = func(ctx context.Context) (*Artist, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().Artist.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withArtist sets the old Artist of the mutation.
+func withArtist(node *Artist) artistOption {
+	return func(m *ArtistMutation) {
+		m.oldValue = func(context.Context) (*Artist, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m ArtistMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m ArtistMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of Artist entities.
+func (m *ArtistMutation) SetID(id pid.ID) {
+	m.id = &id
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *ArtistMutation) ID() (id pid.ID, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *ArtistMutation) IDs(ctx context.Context) ([]pid.ID, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []pid.ID{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().Artist.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetName sets the "name" field.
+func (m *ArtistMutation) SetName(s string) {
+	m.name = &s
+}
+
+// Name returns the value of the "name" field in the mutation.
+func (m *ArtistMutation) Name() (r string, exists bool) {
+	v := m.name
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldName returns the old "name" field's value of the Artist entity.
+// If the Artist object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ArtistMutation) OldName(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldName is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldName requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldName: %w", err)
+	}
+	return oldValue.Name, nil
+}
+
+// ResetName resets all changes to the "name" field.
+func (m *ArtistMutation) ResetName() {
+	m.name = nil
+}
+
+// SetMbid sets the "mbid" field.
+func (m *ArtistMutation) SetMbid(u uuid.UUID) {
+	m.mbid = &u
+}
+
+// Mbid returns the value of the "mbid" field in the mutation.
+func (m *ArtistMutation) Mbid() (r uuid.UUID, exists bool) {
+	v := m.mbid
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldMbid returns the old "mbid" field's value of the Artist entity.
+// If the Artist object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ArtistMutation) OldMbid(ctx context.Context) (v *uuid.UUID, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldMbid is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldMbid requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldMbid: %w", err)
+	}
+	return oldValue.Mbid, nil
+}
+
+// ClearMbid clears the value of the "mbid" field.
+func (m *ArtistMutation) ClearMbid() {
+	m.mbid = nil
+	m.clearedFields[artist.FieldMbid] = struct{}{}
+}
+
+// MbidCleared returns if the "mbid" field was cleared in this mutation.
+func (m *ArtistMutation) MbidCleared() bool {
+	_, ok := m.clearedFields[artist.FieldMbid]
+	return ok
+}
+
+// ResetMbid resets all changes to the "mbid" field.
+func (m *ArtistMutation) ResetMbid() {
+	m.mbid = nil
+	delete(m.clearedFields, artist.FieldMbid)
+}
+
+// AddAppearingTrackIDs adds the "appearing_tracks" edge to the Track entity by ids.
+func (m *ArtistMutation) AddAppearingTrackIDs(ids ...pid.ID) {
+	if m.appearing_tracks == nil {
+		m.appearing_tracks = make(map[pid.ID]struct{})
+	}
+	for i := range ids {
+		m.appearing_tracks[ids[i]] = struct{}{}
+	}
+}
+
+// ClearAppearingTracks clears the "appearing_tracks" edge to the Track entity.
+func (m *ArtistMutation) ClearAppearingTracks() {
+	m.clearedappearing_tracks = true
+}
+
+// AppearingTracksCleared reports if the "appearing_tracks" edge to the Track entity was cleared.
+func (m *ArtistMutation) AppearingTracksCleared() bool {
+	return m.clearedappearing_tracks
+}
+
+// RemoveAppearingTrackIDs removes the "appearing_tracks" edge to the Track entity by IDs.
+func (m *ArtistMutation) RemoveAppearingTrackIDs(ids ...pid.ID) {
+	if m.removedappearing_tracks == nil {
+		m.removedappearing_tracks = make(map[pid.ID]struct{})
+	}
+	for i := range ids {
+		delete(m.appearing_tracks, ids[i])
+		m.removedappearing_tracks[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedAppearingTracks returns the removed IDs of the "appearing_tracks" edge to the Track entity.
+func (m *ArtistMutation) RemovedAppearingTracksIDs() (ids []pid.ID) {
+	for id := range m.removedappearing_tracks {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// AppearingTracksIDs returns the "appearing_tracks" edge IDs in the mutation.
+func (m *ArtistMutation) AppearingTracksIDs() (ids []pid.ID) {
+	for id := range m.appearing_tracks {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetAppearingTracks resets all changes to the "appearing_tracks" edge.
+func (m *ArtistMutation) ResetAppearingTracks() {
+	m.appearing_tracks = nil
+	m.clearedappearing_tracks = false
+	m.removedappearing_tracks = nil
+}
+
+// AddAppearingReleaseIDs adds the "appearing_releases" edge to the Release entity by ids.
+func (m *ArtistMutation) AddAppearingReleaseIDs(ids ...pid.ID) {
+	if m.appearing_releases == nil {
+		m.appearing_releases = make(map[pid.ID]struct{})
+	}
+	for i := range ids {
+		m.appearing_releases[ids[i]] = struct{}{}
+	}
+}
+
+// ClearAppearingReleases clears the "appearing_releases" edge to the Release entity.
+func (m *ArtistMutation) ClearAppearingReleases() {
+	m.clearedappearing_releases = true
+}
+
+// AppearingReleasesCleared reports if the "appearing_releases" edge to the Release entity was cleared.
+func (m *ArtistMutation) AppearingReleasesCleared() bool {
+	return m.clearedappearing_releases
+}
+
+// RemoveAppearingReleaseIDs removes the "appearing_releases" edge to the Release entity by IDs.
+func (m *ArtistMutation) RemoveAppearingReleaseIDs(ids ...pid.ID) {
+	if m.removedappearing_releases == nil {
+		m.removedappearing_releases = make(map[pid.ID]struct{})
+	}
+	for i := range ids {
+		delete(m.appearing_releases, ids[i])
+		m.removedappearing_releases[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedAppearingReleases returns the removed IDs of the "appearing_releases" edge to the Release entity.
+func (m *ArtistMutation) RemovedAppearingReleasesIDs() (ids []pid.ID) {
+	for id := range m.removedappearing_releases {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// AppearingReleasesIDs returns the "appearing_releases" edge IDs in the mutation.
+func (m *ArtistMutation) AppearingReleasesIDs() (ids []pid.ID) {
+	for id := range m.appearing_releases {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetAppearingReleases resets all changes to the "appearing_releases" edge.
+func (m *ArtistMutation) ResetAppearingReleases() {
+	m.appearing_releases = nil
+	m.clearedappearing_releases = false
+	m.removedappearing_releases = nil
+}
+
+// Where appends a list predicates to the ArtistMutation builder.
+func (m *ArtistMutation) Where(ps ...predicate.Artist) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the ArtistMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *ArtistMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.Artist, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *ArtistMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *ArtistMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (Artist).
+func (m *ArtistMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *ArtistMutation) Fields() []string {
+	fields := make([]string, 0, 2)
+	if m.name != nil {
+		fields = append(fields, artist.FieldName)
+	}
+	if m.mbid != nil {
+		fields = append(fields, artist.FieldMbid)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *ArtistMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case artist.FieldName:
+		return m.Name()
+	case artist.FieldMbid:
+		return m.Mbid()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *ArtistMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case artist.FieldName:
+		return m.OldName(ctx)
+	case artist.FieldMbid:
+		return m.OldMbid(ctx)
+	}
+	return nil, fmt.Errorf("unknown Artist field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *ArtistMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case artist.FieldName:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetName(v)
+		return nil
+	case artist.FieldMbid:
+		v, ok := value.(uuid.UUID)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetMbid(v)
+		return nil
+	}
+	return fmt.Errorf("unknown Artist field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *ArtistMutation) AddedFields() []string {
+	return nil
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *ArtistMutation) AddedField(name string) (ent.Value, bool) {
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *ArtistMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	}
+	return fmt.Errorf("unknown Artist numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *ArtistMutation) ClearedFields() []string {
+	var fields []string
+	if m.FieldCleared(artist.FieldMbid) {
+		fields = append(fields, artist.FieldMbid)
+	}
+	return fields
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *ArtistMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *ArtistMutation) ClearField(name string) error {
+	switch name {
+	case artist.FieldMbid:
+		m.ClearMbid()
+		return nil
+	}
+	return fmt.Errorf("unknown Artist nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *ArtistMutation) ResetField(name string) error {
+	switch name {
+	case artist.FieldName:
+		m.ResetName()
+		return nil
+	case artist.FieldMbid:
+		m.ResetMbid()
+		return nil
+	}
+	return fmt.Errorf("unknown Artist field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *ArtistMutation) AddedEdges() []string {
+	edges := make([]string, 0, 2)
+	if m.appearing_tracks != nil {
+		edges = append(edges, artist.EdgeAppearingTracks)
+	}
+	if m.appearing_releases != nil {
+		edges = append(edges, artist.EdgeAppearingReleases)
+	}
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *ArtistMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case artist.EdgeAppearingTracks:
+		ids := make([]ent.Value, 0, len(m.appearing_tracks))
+		for id := range m.appearing_tracks {
+			ids = append(ids, id)
+		}
+		return ids
+	case artist.EdgeAppearingReleases:
+		ids := make([]ent.Value, 0, len(m.appearing_releases))
+		for id := range m.appearing_releases {
+			ids = append(ids, id)
+		}
+		return ids
+	}
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *ArtistMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 2)
+	if m.removedappearing_tracks != nil {
+		edges = append(edges, artist.EdgeAppearingTracks)
+	}
+	if m.removedappearing_releases != nil {
+		edges = append(edges, artist.EdgeAppearingReleases)
+	}
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *ArtistMutation) RemovedIDs(name string) []ent.Value {
+	switch name {
+	case artist.EdgeAppearingTracks:
+		ids := make([]ent.Value, 0, len(m.removedappearing_tracks))
+		for id := range m.removedappearing_tracks {
+			ids = append(ids, id)
+		}
+		return ids
+	case artist.EdgeAppearingReleases:
+		ids := make([]ent.Value, 0, len(m.removedappearing_releases))
+		for id := range m.removedappearing_releases {
+			ids = append(ids, id)
+		}
+		return ids
+	}
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *ArtistMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 2)
+	if m.clearedappearing_tracks {
+		edges = append(edges, artist.EdgeAppearingTracks)
+	}
+	if m.clearedappearing_releases {
+		edges = append(edges, artist.EdgeAppearingReleases)
+	}
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *ArtistMutation) EdgeCleared(name string) bool {
+	switch name {
+	case artist.EdgeAppearingTracks:
+		return m.clearedappearing_tracks
+	case artist.EdgeAppearingReleases:
+		return m.clearedappearing_releases
+	}
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *ArtistMutation) ClearEdge(name string) error {
+	switch name {
+	}
+	return fmt.Errorf("unknown Artist unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *ArtistMutation) ResetEdge(name string) error {
+	switch name {
+	case artist.EdgeAppearingTracks:
+		m.ResetAppearingTracks()
+		return nil
+	case artist.EdgeAppearingReleases:
+		m.ResetAppearingReleases()
+		return nil
+	}
+	return fmt.Errorf("unknown Artist edge %s", name)
+}
+
+// ImageMutation represents an operation that mutates the Image nodes in the graph.
+type ImageMutation struct {
+	config
+	op               Op
+	typ              string
+	id               *pid.ID
+	file             *string
+	_type            *image.Type
+	note             *string
+	dimentions       *[]int
+	appenddimentions []int
+	size_bits        *uint32
+	addsize_bits     *int32
+	created_at       *time.Time
+	updated_at       *time.Time
+	deleted_at       *time.Time
+	clearedFields    map[string]struct{}
+	release          *pid.ID
+	clearedrelease   bool
+	uploader         *pid.ID
+	cleareduploader  bool
+	done             bool
+	oldValue         func(context.Context) (*Image, error)
+	predicates       []predicate.Image
+}
+
+var _ ent.Mutation = (*ImageMutation)(nil)
+
+// imageOption allows management of the mutation configuration using functional options.
+type imageOption func(*ImageMutation)
+
+// newImageMutation creates new mutation for the Image entity.
+func newImageMutation(c config, op Op, opts ...imageOption) *ImageMutation {
+	m := &ImageMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeImage,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withImageID sets the ID field of the mutation.
+func withImageID(id pid.ID) imageOption {
+	return func(m *ImageMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *Image
+		)
+		m.oldValue = func(ctx context.Context) (*Image, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().Image.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withImage sets the old Image of the mutation.
+func withImage(node *Image) imageOption {
+	return func(m *ImageMutation) {
+		m.oldValue = func(context.Context) (*Image, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m ImageMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m ImageMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of Image entities.
+func (m *ImageMutation) SetID(id pid.ID) {
+	m.id = &id
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *ImageMutation) ID() (id pid.ID, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *ImageMutation) IDs(ctx context.Context) ([]pid.ID, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []pid.ID{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().Image.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetFile sets the "file" field.
+func (m *ImageMutation) SetFile(s string) {
+	m.file = &s
+}
+
+// File returns the value of the "file" field in the mutation.
+func (m *ImageMutation) File() (r string, exists bool) {
+	v := m.file
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldFile returns the old "file" field's value of the Image entity.
+// If the Image object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ImageMutation) OldFile(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldFile is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldFile requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldFile: %w", err)
+	}
+	return oldValue.File, nil
+}
+
+// ResetFile resets all changes to the "file" field.
+func (m *ImageMutation) ResetFile() {
+	m.file = nil
+}
+
+// SetType sets the "type" field.
+func (m *ImageMutation) SetType(i image.Type) {
+	m._type = &i
+}
+
+// GetType returns the value of the "type" field in the mutation.
+func (m *ImageMutation) GetType() (r image.Type, exists bool) {
+	v := m._type
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldType returns the old "type" field's value of the Image entity.
+// If the Image object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ImageMutation) OldType(ctx context.Context) (v image.Type, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldType is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldType requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldType: %w", err)
+	}
+	return oldValue.Type, nil
+}
+
+// ResetType resets all changes to the "type" field.
+func (m *ImageMutation) ResetType() {
+	m._type = nil
+}
+
+// SetNote sets the "note" field.
+func (m *ImageMutation) SetNote(s string) {
+	m.note = &s
+}
+
+// Note returns the value of the "note" field in the mutation.
+func (m *ImageMutation) Note() (r string, exists bool) {
+	v := m.note
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldNote returns the old "note" field's value of the Image entity.
+// If the Image object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ImageMutation) OldNote(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldNote is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldNote requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldNote: %w", err)
+	}
+	return oldValue.Note, nil
+}
+
+// ClearNote clears the value of the "note" field.
+func (m *ImageMutation) ClearNote() {
+	m.note = nil
+	m.clearedFields[image.FieldNote] = struct{}{}
+}
+
+// NoteCleared returns if the "note" field was cleared in this mutation.
+func (m *ImageMutation) NoteCleared() bool {
+	_, ok := m.clearedFields[image.FieldNote]
+	return ok
+}
+
+// ResetNote resets all changes to the "note" field.
+func (m *ImageMutation) ResetNote() {
+	m.note = nil
+	delete(m.clearedFields, image.FieldNote)
+}
+
+// SetDimentions sets the "dimentions" field.
+func (m *ImageMutation) SetDimentions(i []int) {
+	m.dimentions = &i
+	m.appenddimentions = nil
+}
+
+// Dimentions returns the value of the "dimentions" field in the mutation.
+func (m *ImageMutation) Dimentions() (r []int, exists bool) {
+	v := m.dimentions
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldDimentions returns the old "dimentions" field's value of the Image entity.
+// If the Image object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ImageMutation) OldDimentions(ctx context.Context) (v []int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldDimentions is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldDimentions requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldDimentions: %w", err)
+	}
+	return oldValue.Dimentions, nil
+}
+
+// AppendDimentions adds i to the "dimentions" field.
+func (m *ImageMutation) AppendDimentions(i []int) {
+	m.appenddimentions = append(m.appenddimentions, i...)
+}
+
+// AppendedDimentions returns the list of values that were appended to the "dimentions" field in this mutation.
+func (m *ImageMutation) AppendedDimentions() ([]int, bool) {
+	if len(m.appenddimentions) == 0 {
+		return nil, false
+	}
+	return m.appenddimentions, true
+}
+
+// ResetDimentions resets all changes to the "dimentions" field.
+func (m *ImageMutation) ResetDimentions() {
+	m.dimentions = nil
+	m.appenddimentions = nil
+}
+
+// SetSizeBits sets the "size_bits" field.
+func (m *ImageMutation) SetSizeBits(u uint32) {
+	m.size_bits = &u
+	m.addsize_bits = nil
+}
+
+// SizeBits returns the value of the "size_bits" field in the mutation.
+func (m *ImageMutation) SizeBits() (r uint32, exists bool) {
+	v := m.size_bits
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldSizeBits returns the old "size_bits" field's value of the Image entity.
+// If the Image object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ImageMutation) OldSizeBits(ctx context.Context) (v uint32, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSizeBits is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSizeBits requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSizeBits: %w", err)
+	}
+	return oldValue.SizeBits, nil
+}
+
+// AddSizeBits adds u to the "size_bits" field.
+func (m *ImageMutation) AddSizeBits(u int32) {
+	if m.addsize_bits != nil {
+		*m.addsize_bits += u
+	} else {
+		m.addsize_bits = &u
+	}
+}
+
+// AddedSizeBits returns the value that was added to the "size_bits" field in this mutation.
+func (m *ImageMutation) AddedSizeBits() (r int32, exists bool) {
+	v := m.addsize_bits
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetSizeBits resets all changes to the "size_bits" field.
+func (m *ImageMutation) ResetSizeBits() {
+	m.size_bits = nil
+	m.addsize_bits = nil
+}
+
+// SetCreatedAt sets the "created_at" field.
+func (m *ImageMutation) SetCreatedAt(t time.Time) {
+	m.created_at = &t
+}
+
+// CreatedAt returns the value of the "created_at" field in the mutation.
+func (m *ImageMutation) CreatedAt() (r time.Time, exists bool) {
+	v := m.created_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatedAt returns the old "created_at" field's value of the Image entity.
+// If the Image object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ImageMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
+	}
+	return oldValue.CreatedAt, nil
+}
+
+// ResetCreatedAt resets all changes to the "created_at" field.
+func (m *ImageMutation) ResetCreatedAt() {
+	m.created_at = nil
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (m *ImageMutation) SetUpdatedAt(t time.Time) {
+	m.updated_at = &t
+}
+
+// UpdatedAt returns the value of the "updated_at" field in the mutation.
+func (m *ImageMutation) UpdatedAt() (r time.Time, exists bool) {
+	v := m.updated_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUpdatedAt returns the old "updated_at" field's value of the Image entity.
+// If the Image object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ImageMutation) OldUpdatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUpdatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUpdatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUpdatedAt: %w", err)
+	}
+	return oldValue.UpdatedAt, nil
+}
+
+// ResetUpdatedAt resets all changes to the "updated_at" field.
+func (m *ImageMutation) ResetUpdatedAt() {
+	m.updated_at = nil
+}
+
+// SetDeletedAt sets the "deleted_at" field.
+func (m *ImageMutation) SetDeletedAt(t time.Time) {
+	m.deleted_at = &t
+}
+
+// DeletedAt returns the value of the "deleted_at" field in the mutation.
+func (m *ImageMutation) DeletedAt() (r time.Time, exists bool) {
+	v := m.deleted_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldDeletedAt returns the old "deleted_at" field's value of the Image entity.
+// If the Image object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ImageMutation) OldDeletedAt(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldDeletedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldDeletedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldDeletedAt: %w", err)
+	}
+	return oldValue.DeletedAt, nil
+}
+
+// ClearDeletedAt clears the value of the "deleted_at" field.
+func (m *ImageMutation) ClearDeletedAt() {
+	m.deleted_at = nil
+	m.clearedFields[image.FieldDeletedAt] = struct{}{}
+}
+
+// DeletedAtCleared returns if the "deleted_at" field was cleared in this mutation.
+func (m *ImageMutation) DeletedAtCleared() bool {
+	_, ok := m.clearedFields[image.FieldDeletedAt]
+	return ok
+}
+
+// ResetDeletedAt resets all changes to the "deleted_at" field.
+func (m *ImageMutation) ResetDeletedAt() {
+	m.deleted_at = nil
+	delete(m.clearedFields, image.FieldDeletedAt)
+}
+
+// SetReleaseID sets the "release" edge to the Release entity by id.
+func (m *ImageMutation) SetReleaseID(id pid.ID) {
+	m.release = &id
+}
+
+// ClearRelease clears the "release" edge to the Release entity.
+func (m *ImageMutation) ClearRelease() {
+	m.clearedrelease = true
+}
+
+// ReleaseCleared reports if the "release" edge to the Release entity was cleared.
+func (m *ImageMutation) ReleaseCleared() bool {
+	return m.clearedrelease
+}
+
+// ReleaseID returns the "release" edge ID in the mutation.
+func (m *ImageMutation) ReleaseID() (id pid.ID, exists bool) {
+	if m.release != nil {
+		return *m.release, true
+	}
+	return
+}
+
+// ReleaseIDs returns the "release" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// ReleaseID instead. It exists only for internal usage by the builders.
+func (m *ImageMutation) ReleaseIDs() (ids []pid.ID) {
+	if id := m.release; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetRelease resets all changes to the "release" edge.
+func (m *ImageMutation) ResetRelease() {
+	m.release = nil
+	m.clearedrelease = false
+}
+
+// SetUploaderID sets the "uploader" edge to the User entity by id.
+func (m *ImageMutation) SetUploaderID(id pid.ID) {
+	m.uploader = &id
+}
+
+// ClearUploader clears the "uploader" edge to the User entity.
+func (m *ImageMutation) ClearUploader() {
+	m.cleareduploader = true
+}
+
+// UploaderCleared reports if the "uploader" edge to the User entity was cleared.
+func (m *ImageMutation) UploaderCleared() bool {
+	return m.cleareduploader
+}
+
+// UploaderID returns the "uploader" edge ID in the mutation.
+func (m *ImageMutation) UploaderID() (id pid.ID, exists bool) {
+	if m.uploader != nil {
+		return *m.uploader, true
+	}
+	return
+}
+
+// UploaderIDs returns the "uploader" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// UploaderID instead. It exists only for internal usage by the builders.
+func (m *ImageMutation) UploaderIDs() (ids []pid.ID) {
+	if id := m.uploader; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetUploader resets all changes to the "uploader" edge.
+func (m *ImageMutation) ResetUploader() {
+	m.uploader = nil
+	m.cleareduploader = false
+}
+
+// Where appends a list predicates to the ImageMutation builder.
+func (m *ImageMutation) Where(ps ...predicate.Image) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the ImageMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *ImageMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.Image, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *ImageMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *ImageMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (Image).
+func (m *ImageMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *ImageMutation) Fields() []string {
+	fields := make([]string, 0, 8)
+	if m.file != nil {
+		fields = append(fields, image.FieldFile)
+	}
+	if m._type != nil {
+		fields = append(fields, image.FieldType)
+	}
+	if m.note != nil {
+		fields = append(fields, image.FieldNote)
+	}
+	if m.dimentions != nil {
+		fields = append(fields, image.FieldDimentions)
+	}
+	if m.size_bits != nil {
+		fields = append(fields, image.FieldSizeBits)
+	}
+	if m.created_at != nil {
+		fields = append(fields, image.FieldCreatedAt)
+	}
+	if m.updated_at != nil {
+		fields = append(fields, image.FieldUpdatedAt)
+	}
+	if m.deleted_at != nil {
+		fields = append(fields, image.FieldDeletedAt)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *ImageMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case image.FieldFile:
+		return m.File()
+	case image.FieldType:
+		return m.GetType()
+	case image.FieldNote:
+		return m.Note()
+	case image.FieldDimentions:
+		return m.Dimentions()
+	case image.FieldSizeBits:
+		return m.SizeBits()
+	case image.FieldCreatedAt:
+		return m.CreatedAt()
+	case image.FieldUpdatedAt:
+		return m.UpdatedAt()
+	case image.FieldDeletedAt:
+		return m.DeletedAt()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *ImageMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case image.FieldFile:
+		return m.OldFile(ctx)
+	case image.FieldType:
+		return m.OldType(ctx)
+	case image.FieldNote:
+		return m.OldNote(ctx)
+	case image.FieldDimentions:
+		return m.OldDimentions(ctx)
+	case image.FieldSizeBits:
+		return m.OldSizeBits(ctx)
+	case image.FieldCreatedAt:
+		return m.OldCreatedAt(ctx)
+	case image.FieldUpdatedAt:
+		return m.OldUpdatedAt(ctx)
+	case image.FieldDeletedAt:
+		return m.OldDeletedAt(ctx)
+	}
+	return nil, fmt.Errorf("unknown Image field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *ImageMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case image.FieldFile:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetFile(v)
+		return nil
+	case image.FieldType:
+		v, ok := value.(image.Type)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetType(v)
+		return nil
+	case image.FieldNote:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetNote(v)
+		return nil
+	case image.FieldDimentions:
+		v, ok := value.([]int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetDimentions(v)
+		return nil
+	case image.FieldSizeBits:
+		v, ok := value.(uint32)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetSizeBits(v)
+		return nil
+	case image.FieldCreatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatedAt(v)
+		return nil
+	case image.FieldUpdatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUpdatedAt(v)
+		return nil
+	case image.FieldDeletedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetDeletedAt(v)
+		return nil
+	}
+	return fmt.Errorf("unknown Image field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *ImageMutation) AddedFields() []string {
+	var fields []string
+	if m.addsize_bits != nil {
+		fields = append(fields, image.FieldSizeBits)
+	}
+	return fields
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *ImageMutation) AddedField(name string) (ent.Value, bool) {
+	switch name {
+	case image.FieldSizeBits:
+		return m.AddedSizeBits()
+	}
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *ImageMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	case image.FieldSizeBits:
+		v, ok := value.(int32)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddSizeBits(v)
+		return nil
+	}
+	return fmt.Errorf("unknown Image numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *ImageMutation) ClearedFields() []string {
+	var fields []string
+	if m.FieldCleared(image.FieldNote) {
+		fields = append(fields, image.FieldNote)
+	}
+	if m.FieldCleared(image.FieldDeletedAt) {
+		fields = append(fields, image.FieldDeletedAt)
+	}
+	return fields
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *ImageMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *ImageMutation) ClearField(name string) error {
+	switch name {
+	case image.FieldNote:
+		m.ClearNote()
+		return nil
+	case image.FieldDeletedAt:
+		m.ClearDeletedAt()
+		return nil
+	}
+	return fmt.Errorf("unknown Image nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *ImageMutation) ResetField(name string) error {
+	switch name {
+	case image.FieldFile:
+		m.ResetFile()
+		return nil
+	case image.FieldType:
+		m.ResetType()
+		return nil
+	case image.FieldNote:
+		m.ResetNote()
+		return nil
+	case image.FieldDimentions:
+		m.ResetDimentions()
+		return nil
+	case image.FieldSizeBits:
+		m.ResetSizeBits()
+		return nil
+	case image.FieldCreatedAt:
+		m.ResetCreatedAt()
+		return nil
+	case image.FieldUpdatedAt:
+		m.ResetUpdatedAt()
+		return nil
+	case image.FieldDeletedAt:
+		m.ResetDeletedAt()
+		return nil
+	}
+	return fmt.Errorf("unknown Image field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *ImageMutation) AddedEdges() []string {
+	edges := make([]string, 0, 2)
+	if m.release != nil {
+		edges = append(edges, image.EdgeRelease)
+	}
+	if m.uploader != nil {
+		edges = append(edges, image.EdgeUploader)
+	}
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *ImageMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case image.EdgeRelease:
+		if id := m.release; id != nil {
+			return []ent.Value{*id}
+		}
+	case image.EdgeUploader:
+		if id := m.uploader; id != nil {
+			return []ent.Value{*id}
+		}
+	}
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *ImageMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 2)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *ImageMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *ImageMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 2)
+	if m.clearedrelease {
+		edges = append(edges, image.EdgeRelease)
+	}
+	if m.cleareduploader {
+		edges = append(edges, image.EdgeUploader)
+	}
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *ImageMutation) EdgeCleared(name string) bool {
+	switch name {
+	case image.EdgeRelease:
+		return m.clearedrelease
+	case image.EdgeUploader:
+		return m.cleareduploader
+	}
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *ImageMutation) ClearEdge(name string) error {
+	switch name {
+	case image.EdgeRelease:
+		m.ClearRelease()
+		return nil
+	case image.EdgeUploader:
+		m.ClearUploader()
+		return nil
+	}
+	return fmt.Errorf("unknown Image unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *ImageMutation) ResetEdge(name string) error {
+	switch name {
+	case image.EdgeRelease:
+		m.ResetRelease()
+		return nil
+	case image.EdgeUploader:
+		m.ResetUploader()
+		return nil
+	}
+	return fmt.Errorf("unknown Image edge %s", name)
+}
+
+// ReleaseMutation represents an operation that mutates the Release nodes in the graph.
+type ReleaseMutation struct {
+	config
+	op                       Op
+	typ                      string
+	id                       *pid.ID
+	name                     *string
+	_type                    *release.Type
+	clearedFields            map[string]struct{}
+	image                    *pid.ID
+	clearedimage             bool
+	appearing_artists        map[pid.ID]struct{}
+	removedappearing_artists map[pid.ID]struct{}
+	clearedappearing_artists bool
+	done                     bool
+	oldValue                 func(context.Context) (*Release, error)
+	predicates               []predicate.Release
+}
+
+var _ ent.Mutation = (*ReleaseMutation)(nil)
+
+// releaseOption allows management of the mutation configuration using functional options.
+type releaseOption func(*ReleaseMutation)
+
+// newReleaseMutation creates new mutation for the Release entity.
+func newReleaseMutation(c config, op Op, opts ...releaseOption) *ReleaseMutation {
+	m := &ReleaseMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeRelease,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withReleaseID sets the ID field of the mutation.
+func withReleaseID(id pid.ID) releaseOption {
+	return func(m *ReleaseMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *Release
+		)
+		m.oldValue = func(ctx context.Context) (*Release, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().Release.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withRelease sets the old Release of the mutation.
+func withRelease(node *Release) releaseOption {
+	return func(m *ReleaseMutation) {
+		m.oldValue = func(context.Context) (*Release, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m ReleaseMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m ReleaseMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of Release entities.
+func (m *ReleaseMutation) SetID(id pid.ID) {
+	m.id = &id
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *ReleaseMutation) ID() (id pid.ID, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *ReleaseMutation) IDs(ctx context.Context) ([]pid.ID, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []pid.ID{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().Release.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetName sets the "name" field.
+func (m *ReleaseMutation) SetName(s string) {
+	m.name = &s
+}
+
+// Name returns the value of the "name" field in the mutation.
+func (m *ReleaseMutation) Name() (r string, exists bool) {
+	v := m.name
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldName returns the old "name" field's value of the Release entity.
+// If the Release object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ReleaseMutation) OldName(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldName is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldName requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldName: %w", err)
+	}
+	return oldValue.Name, nil
+}
+
+// ResetName resets all changes to the "name" field.
+func (m *ReleaseMutation) ResetName() {
+	m.name = nil
+}
+
+// SetType sets the "type" field.
+func (m *ReleaseMutation) SetType(r release.Type) {
+	m._type = &r
+}
+
+// GetType returns the value of the "type" field in the mutation.
+func (m *ReleaseMutation) GetType() (r release.Type, exists bool) {
+	v := m._type
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldType returns the old "type" field's value of the Release entity.
+// If the Release object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ReleaseMutation) OldType(ctx context.Context) (v release.Type, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldType is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldType requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldType: %w", err)
+	}
+	return oldValue.Type, nil
+}
+
+// ResetType resets all changes to the "type" field.
+func (m *ReleaseMutation) ResetType() {
+	m._type = nil
+}
+
+// SetImageID sets the "image" edge to the Image entity by id.
+func (m *ReleaseMutation) SetImageID(id pid.ID) {
+	m.image = &id
+}
+
+// ClearImage clears the "image" edge to the Image entity.
+func (m *ReleaseMutation) ClearImage() {
+	m.clearedimage = true
+}
+
+// ImageCleared reports if the "image" edge to the Image entity was cleared.
+func (m *ReleaseMutation) ImageCleared() bool {
+	return m.clearedimage
+}
+
+// ImageID returns the "image" edge ID in the mutation.
+func (m *ReleaseMutation) ImageID() (id pid.ID, exists bool) {
+	if m.image != nil {
+		return *m.image, true
+	}
+	return
+}
+
+// ImageIDs returns the "image" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// ImageID instead. It exists only for internal usage by the builders.
+func (m *ReleaseMutation) ImageIDs() (ids []pid.ID) {
+	if id := m.image; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetImage resets all changes to the "image" edge.
+func (m *ReleaseMutation) ResetImage() {
+	m.image = nil
+	m.clearedimage = false
+}
+
+// AddAppearingArtistIDs adds the "appearing_artists" edge to the Artist entity by ids.
+func (m *ReleaseMutation) AddAppearingArtistIDs(ids ...pid.ID) {
+	if m.appearing_artists == nil {
+		m.appearing_artists = make(map[pid.ID]struct{})
+	}
+	for i := range ids {
+		m.appearing_artists[ids[i]] = struct{}{}
+	}
+}
+
+// ClearAppearingArtists clears the "appearing_artists" edge to the Artist entity.
+func (m *ReleaseMutation) ClearAppearingArtists() {
+	m.clearedappearing_artists = true
+}
+
+// AppearingArtistsCleared reports if the "appearing_artists" edge to the Artist entity was cleared.
+func (m *ReleaseMutation) AppearingArtistsCleared() bool {
+	return m.clearedappearing_artists
+}
+
+// RemoveAppearingArtistIDs removes the "appearing_artists" edge to the Artist entity by IDs.
+func (m *ReleaseMutation) RemoveAppearingArtistIDs(ids ...pid.ID) {
+	if m.removedappearing_artists == nil {
+		m.removedappearing_artists = make(map[pid.ID]struct{})
+	}
+	for i := range ids {
+		delete(m.appearing_artists, ids[i])
+		m.removedappearing_artists[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedAppearingArtists returns the removed IDs of the "appearing_artists" edge to the Artist entity.
+func (m *ReleaseMutation) RemovedAppearingArtistsIDs() (ids []pid.ID) {
+	for id := range m.removedappearing_artists {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// AppearingArtistsIDs returns the "appearing_artists" edge IDs in the mutation.
+func (m *ReleaseMutation) AppearingArtistsIDs() (ids []pid.ID) {
+	for id := range m.appearing_artists {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetAppearingArtists resets all changes to the "appearing_artists" edge.
+func (m *ReleaseMutation) ResetAppearingArtists() {
+	m.appearing_artists = nil
+	m.clearedappearing_artists = false
+	m.removedappearing_artists = nil
+}
+
+// Where appends a list predicates to the ReleaseMutation builder.
+func (m *ReleaseMutation) Where(ps ...predicate.Release) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the ReleaseMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *ReleaseMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.Release, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *ReleaseMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *ReleaseMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (Release).
+func (m *ReleaseMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *ReleaseMutation) Fields() []string {
+	fields := make([]string, 0, 2)
+	if m.name != nil {
+		fields = append(fields, release.FieldName)
+	}
+	if m._type != nil {
+		fields = append(fields, release.FieldType)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *ReleaseMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case release.FieldName:
+		return m.Name()
+	case release.FieldType:
+		return m.GetType()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *ReleaseMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case release.FieldName:
+		return m.OldName(ctx)
+	case release.FieldType:
+		return m.OldType(ctx)
+	}
+	return nil, fmt.Errorf("unknown Release field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *ReleaseMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case release.FieldName:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetName(v)
+		return nil
+	case release.FieldType:
+		v, ok := value.(release.Type)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetType(v)
+		return nil
+	}
+	return fmt.Errorf("unknown Release field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *ReleaseMutation) AddedFields() []string {
+	return nil
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *ReleaseMutation) AddedField(name string) (ent.Value, bool) {
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *ReleaseMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	}
+	return fmt.Errorf("unknown Release numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *ReleaseMutation) ClearedFields() []string {
+	return nil
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *ReleaseMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *ReleaseMutation) ClearField(name string) error {
+	return fmt.Errorf("unknown Release nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *ReleaseMutation) ResetField(name string) error {
+	switch name {
+	case release.FieldName:
+		m.ResetName()
+		return nil
+	case release.FieldType:
+		m.ResetType()
+		return nil
+	}
+	return fmt.Errorf("unknown Release field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *ReleaseMutation) AddedEdges() []string {
+	edges := make([]string, 0, 2)
+	if m.image != nil {
+		edges = append(edges, release.EdgeImage)
+	}
+	if m.appearing_artists != nil {
+		edges = append(edges, release.EdgeAppearingArtists)
+	}
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *ReleaseMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case release.EdgeImage:
+		if id := m.image; id != nil {
+			return []ent.Value{*id}
+		}
+	case release.EdgeAppearingArtists:
+		ids := make([]ent.Value, 0, len(m.appearing_artists))
+		for id := range m.appearing_artists {
+			ids = append(ids, id)
+		}
+		return ids
+	}
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *ReleaseMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 2)
+	if m.removedappearing_artists != nil {
+		edges = append(edges, release.EdgeAppearingArtists)
+	}
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *ReleaseMutation) RemovedIDs(name string) []ent.Value {
+	switch name {
+	case release.EdgeAppearingArtists:
+		ids := make([]ent.Value, 0, len(m.removedappearing_artists))
+		for id := range m.removedappearing_artists {
+			ids = append(ids, id)
+		}
+		return ids
+	}
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *ReleaseMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 2)
+	if m.clearedimage {
+		edges = append(edges, release.EdgeImage)
+	}
+	if m.clearedappearing_artists {
+		edges = append(edges, release.EdgeAppearingArtists)
+	}
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *ReleaseMutation) EdgeCleared(name string) bool {
+	switch name {
+	case release.EdgeImage:
+		return m.clearedimage
+	case release.EdgeAppearingArtists:
+		return m.clearedappearing_artists
+	}
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *ReleaseMutation) ClearEdge(name string) error {
+	switch name {
+	case release.EdgeImage:
+		m.ClearImage()
+		return nil
+	}
+	return fmt.Errorf("unknown Release unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *ReleaseMutation) ResetEdge(name string) error {
+	switch name {
+	case release.EdgeImage:
+		m.ResetImage()
+		return nil
+	case release.EdgeAppearingArtists:
+		m.ResetAppearingArtists()
+		return nil
+	}
+	return fmt.Errorf("unknown Release edge %s", name)
+}
+
+// ReleaseAppearanceMutation represents an operation that mutates the ReleaseAppearance nodes in the graph.
+type ReleaseAppearanceMutation struct {
+	config
+	op             Op
+	typ            string
+	_order         *int
+	add_order      *int
+	clearedFields  map[string]struct{}
+	artist         *pid.ID
+	clearedartist  bool
+	release        *pid.ID
+	clearedrelease bool
+	done           bool
+	oldValue       func(context.Context) (*ReleaseAppearance, error)
+	predicates     []predicate.ReleaseAppearance
+}
+
+var _ ent.Mutation = (*ReleaseAppearanceMutation)(nil)
+
+// releaseappearanceOption allows management of the mutation configuration using functional options.
+type releaseappearanceOption func(*ReleaseAppearanceMutation)
+
+// newReleaseAppearanceMutation creates new mutation for the ReleaseAppearance entity.
+func newReleaseAppearanceMutation(c config, op Op, opts ...releaseappearanceOption) *ReleaseAppearanceMutation {
+	m := &ReleaseAppearanceMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeReleaseAppearance,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m ReleaseAppearanceMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m ReleaseAppearanceMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// SetReleaseID sets the "release_id" field.
+func (m *ReleaseAppearanceMutation) SetReleaseID(pi pid.ID) {
+	m.release = &pi
+}
+
+// ReleaseID returns the value of the "release_id" field in the mutation.
+func (m *ReleaseAppearanceMutation) ReleaseID() (r pid.ID, exists bool) {
+	v := m.release
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetReleaseID resets all changes to the "release_id" field.
+func (m *ReleaseAppearanceMutation) ResetReleaseID() {
+	m.release = nil
+}
+
+// SetArtistID sets the "artist_id" field.
+func (m *ReleaseAppearanceMutation) SetArtistID(pi pid.ID) {
+	m.artist = &pi
+}
+
+// ArtistID returns the value of the "artist_id" field in the mutation.
+func (m *ReleaseAppearanceMutation) ArtistID() (r pid.ID, exists bool) {
+	v := m.artist
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetArtistID resets all changes to the "artist_id" field.
+func (m *ReleaseAppearanceMutation) ResetArtistID() {
+	m.artist = nil
+}
+
+// SetOrder sets the "order" field.
+func (m *ReleaseAppearanceMutation) SetOrder(i int) {
+	m._order = &i
+	m.add_order = nil
+}
+
+// Order returns the value of the "order" field in the mutation.
+func (m *ReleaseAppearanceMutation) Order() (r int, exists bool) {
+	v := m._order
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// AddOrder adds i to the "order" field.
+func (m *ReleaseAppearanceMutation) AddOrder(i int) {
+	if m.add_order != nil {
+		*m.add_order += i
+	} else {
+		m.add_order = &i
+	}
+}
+
+// AddedOrder returns the value that was added to the "order" field in this mutation.
+func (m *ReleaseAppearanceMutation) AddedOrder() (r int, exists bool) {
+	v := m.add_order
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetOrder resets all changes to the "order" field.
+func (m *ReleaseAppearanceMutation) ResetOrder() {
+	m._order = nil
+	m.add_order = nil
+}
+
+// ClearArtist clears the "artist" edge to the Artist entity.
+func (m *ReleaseAppearanceMutation) ClearArtist() {
+	m.clearedartist = true
+	m.clearedFields[releaseappearance.FieldArtistID] = struct{}{}
+}
+
+// ArtistCleared reports if the "artist" edge to the Artist entity was cleared.
+func (m *ReleaseAppearanceMutation) ArtistCleared() bool {
+	return m.clearedartist
+}
+
+// ArtistIDs returns the "artist" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// ArtistID instead. It exists only for internal usage by the builders.
+func (m *ReleaseAppearanceMutation) ArtistIDs() (ids []pid.ID) {
+	if id := m.artist; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetArtist resets all changes to the "artist" edge.
+func (m *ReleaseAppearanceMutation) ResetArtist() {
+	m.artist = nil
+	m.clearedartist = false
+}
+
+// ClearRelease clears the "release" edge to the Release entity.
+func (m *ReleaseAppearanceMutation) ClearRelease() {
+	m.clearedrelease = true
+	m.clearedFields[releaseappearance.FieldReleaseID] = struct{}{}
+}
+
+// ReleaseCleared reports if the "release" edge to the Release entity was cleared.
+func (m *ReleaseAppearanceMutation) ReleaseCleared() bool {
+	return m.clearedrelease
+}
+
+// ReleaseIDs returns the "release" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// ReleaseID instead. It exists only for internal usage by the builders.
+func (m *ReleaseAppearanceMutation) ReleaseIDs() (ids []pid.ID) {
+	if id := m.release; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetRelease resets all changes to the "release" edge.
+func (m *ReleaseAppearanceMutation) ResetRelease() {
+	m.release = nil
+	m.clearedrelease = false
+}
+
+// Where appends a list predicates to the ReleaseAppearanceMutation builder.
+func (m *ReleaseAppearanceMutation) Where(ps ...predicate.ReleaseAppearance) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the ReleaseAppearanceMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *ReleaseAppearanceMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.ReleaseAppearance, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *ReleaseAppearanceMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *ReleaseAppearanceMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (ReleaseAppearance).
+func (m *ReleaseAppearanceMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *ReleaseAppearanceMutation) Fields() []string {
+	fields := make([]string, 0, 3)
+	if m.release != nil {
+		fields = append(fields, releaseappearance.FieldReleaseID)
+	}
+	if m.artist != nil {
+		fields = append(fields, releaseappearance.FieldArtistID)
+	}
+	if m._order != nil {
+		fields = append(fields, releaseappearance.FieldOrder)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *ReleaseAppearanceMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case releaseappearance.FieldReleaseID:
+		return m.ReleaseID()
+	case releaseappearance.FieldArtistID:
+		return m.ArtistID()
+	case releaseappearance.FieldOrder:
+		return m.Order()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *ReleaseAppearanceMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	return nil, errors.New("edge schema ReleaseAppearance does not support getting old values")
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *ReleaseAppearanceMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case releaseappearance.FieldReleaseID:
+		v, ok := value.(pid.ID)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetReleaseID(v)
+		return nil
+	case releaseappearance.FieldArtistID:
+		v, ok := value.(pid.ID)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetArtistID(v)
+		return nil
+	case releaseappearance.FieldOrder:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetOrder(v)
+		return nil
+	}
+	return fmt.Errorf("unknown ReleaseAppearance field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *ReleaseAppearanceMutation) AddedFields() []string {
+	var fields []string
+	if m.add_order != nil {
+		fields = append(fields, releaseappearance.FieldOrder)
+	}
+	return fields
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *ReleaseAppearanceMutation) AddedField(name string) (ent.Value, bool) {
+	switch name {
+	case releaseappearance.FieldOrder:
+		return m.AddedOrder()
+	}
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *ReleaseAppearanceMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	case releaseappearance.FieldOrder:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddOrder(v)
+		return nil
+	}
+	return fmt.Errorf("unknown ReleaseAppearance numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *ReleaseAppearanceMutation) ClearedFields() []string {
+	return nil
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *ReleaseAppearanceMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *ReleaseAppearanceMutation) ClearField(name string) error {
+	return fmt.Errorf("unknown ReleaseAppearance nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *ReleaseAppearanceMutation) ResetField(name string) error {
+	switch name {
+	case releaseappearance.FieldReleaseID:
+		m.ResetReleaseID()
+		return nil
+	case releaseappearance.FieldArtistID:
+		m.ResetArtistID()
+		return nil
+	case releaseappearance.FieldOrder:
+		m.ResetOrder()
+		return nil
+	}
+	return fmt.Errorf("unknown ReleaseAppearance field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *ReleaseAppearanceMutation) AddedEdges() []string {
+	edges := make([]string, 0, 2)
+	if m.artist != nil {
+		edges = append(edges, releaseappearance.EdgeArtist)
+	}
+	if m.release != nil {
+		edges = append(edges, releaseappearance.EdgeRelease)
+	}
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *ReleaseAppearanceMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case releaseappearance.EdgeArtist:
+		if id := m.artist; id != nil {
+			return []ent.Value{*id}
+		}
+	case releaseappearance.EdgeRelease:
+		if id := m.release; id != nil {
+			return []ent.Value{*id}
+		}
+	}
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *ReleaseAppearanceMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 2)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *ReleaseAppearanceMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *ReleaseAppearanceMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 2)
+	if m.clearedartist {
+		edges = append(edges, releaseappearance.EdgeArtist)
+	}
+	if m.clearedrelease {
+		edges = append(edges, releaseappearance.EdgeRelease)
+	}
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *ReleaseAppearanceMutation) EdgeCleared(name string) bool {
+	switch name {
+	case releaseappearance.EdgeArtist:
+		return m.clearedartist
+	case releaseappearance.EdgeRelease:
+		return m.clearedrelease
+	}
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *ReleaseAppearanceMutation) ClearEdge(name string) error {
+	switch name {
+	case releaseappearance.EdgeArtist:
+		m.ClearArtist()
+		return nil
+	case releaseappearance.EdgeRelease:
+		m.ClearRelease()
+		return nil
+	}
+	return fmt.Errorf("unknown ReleaseAppearance unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *ReleaseAppearanceMutation) ResetEdge(name string) error {
+	switch name {
+	case releaseappearance.EdgeArtist:
+		m.ResetArtist()
+		return nil
+	case releaseappearance.EdgeRelease:
+		m.ResetRelease()
+		return nil
+	}
+	return fmt.Errorf("unknown ReleaseAppearance edge %s", name)
+}
+
+// TrackMutation represents an operation that mutates the Track nodes in the graph.
+type TrackMutation struct {
+	config
+	op                       Op
+	typ                      string
+	id                       *pid.ID
+	title                    *string
+	clearedFields            map[string]struct{}
+	appearing_artists        map[pid.ID]struct{}
+	removedappearing_artists map[pid.ID]struct{}
+	clearedappearing_artists bool
+	done                     bool
+	oldValue                 func(context.Context) (*Track, error)
+	predicates               []predicate.Track
+}
+
+var _ ent.Mutation = (*TrackMutation)(nil)
+
+// trackOption allows management of the mutation configuration using functional options.
+type trackOption func(*TrackMutation)
+
+// newTrackMutation creates new mutation for the Track entity.
+func newTrackMutation(c config, op Op, opts ...trackOption) *TrackMutation {
+	m := &TrackMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeTrack,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withTrackID sets the ID field of the mutation.
+func withTrackID(id pid.ID) trackOption {
+	return func(m *TrackMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *Track
+		)
+		m.oldValue = func(ctx context.Context) (*Track, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().Track.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withTrack sets the old Track of the mutation.
+func withTrack(node *Track) trackOption {
+	return func(m *TrackMutation) {
+		m.oldValue = func(context.Context) (*Track, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m TrackMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m TrackMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of Track entities.
+func (m *TrackMutation) SetID(id pid.ID) {
+	m.id = &id
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *TrackMutation) ID() (id pid.ID, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *TrackMutation) IDs(ctx context.Context) ([]pid.ID, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []pid.ID{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().Track.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetTitle sets the "title" field.
+func (m *TrackMutation) SetTitle(s string) {
+	m.title = &s
+}
+
+// Title returns the value of the "title" field in the mutation.
+func (m *TrackMutation) Title() (r string, exists bool) {
+	v := m.title
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldTitle returns the old "title" field's value of the Track entity.
+// If the Track object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TrackMutation) OldTitle(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldTitle is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldTitle requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldTitle: %w", err)
+	}
+	return oldValue.Title, nil
+}
+
+// ResetTitle resets all changes to the "title" field.
+func (m *TrackMutation) ResetTitle() {
+	m.title = nil
+}
+
+// AddAppearingArtistIDs adds the "appearing_artists" edge to the Artist entity by ids.
+func (m *TrackMutation) AddAppearingArtistIDs(ids ...pid.ID) {
+	if m.appearing_artists == nil {
+		m.appearing_artists = make(map[pid.ID]struct{})
+	}
+	for i := range ids {
+		m.appearing_artists[ids[i]] = struct{}{}
+	}
+}
+
+// ClearAppearingArtists clears the "appearing_artists" edge to the Artist entity.
+func (m *TrackMutation) ClearAppearingArtists() {
+	m.clearedappearing_artists = true
+}
+
+// AppearingArtistsCleared reports if the "appearing_artists" edge to the Artist entity was cleared.
+func (m *TrackMutation) AppearingArtistsCleared() bool {
+	return m.clearedappearing_artists
+}
+
+// RemoveAppearingArtistIDs removes the "appearing_artists" edge to the Artist entity by IDs.
+func (m *TrackMutation) RemoveAppearingArtistIDs(ids ...pid.ID) {
+	if m.removedappearing_artists == nil {
+		m.removedappearing_artists = make(map[pid.ID]struct{})
+	}
+	for i := range ids {
+		delete(m.appearing_artists, ids[i])
+		m.removedappearing_artists[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedAppearingArtists returns the removed IDs of the "appearing_artists" edge to the Artist entity.
+func (m *TrackMutation) RemovedAppearingArtistsIDs() (ids []pid.ID) {
+	for id := range m.removedappearing_artists {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// AppearingArtistsIDs returns the "appearing_artists" edge IDs in the mutation.
+func (m *TrackMutation) AppearingArtistsIDs() (ids []pid.ID) {
+	for id := range m.appearing_artists {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetAppearingArtists resets all changes to the "appearing_artists" edge.
+func (m *TrackMutation) ResetAppearingArtists() {
+	m.appearing_artists = nil
+	m.clearedappearing_artists = false
+	m.removedappearing_artists = nil
+}
+
+// Where appends a list predicates to the TrackMutation builder.
+func (m *TrackMutation) Where(ps ...predicate.Track) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the TrackMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *TrackMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.Track, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *TrackMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *TrackMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (Track).
+func (m *TrackMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *TrackMutation) Fields() []string {
+	fields := make([]string, 0, 1)
+	if m.title != nil {
+		fields = append(fields, track.FieldTitle)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *TrackMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case track.FieldTitle:
+		return m.Title()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *TrackMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case track.FieldTitle:
+		return m.OldTitle(ctx)
+	}
+	return nil, fmt.Errorf("unknown Track field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *TrackMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case track.FieldTitle:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetTitle(v)
+		return nil
+	}
+	return fmt.Errorf("unknown Track field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *TrackMutation) AddedFields() []string {
+	return nil
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *TrackMutation) AddedField(name string) (ent.Value, bool) {
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *TrackMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	}
+	return fmt.Errorf("unknown Track numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *TrackMutation) ClearedFields() []string {
+	return nil
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *TrackMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *TrackMutation) ClearField(name string) error {
+	return fmt.Errorf("unknown Track nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *TrackMutation) ResetField(name string) error {
+	switch name {
+	case track.FieldTitle:
+		m.ResetTitle()
+		return nil
+	}
+	return fmt.Errorf("unknown Track field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *TrackMutation) AddedEdges() []string {
+	edges := make([]string, 0, 1)
+	if m.appearing_artists != nil {
+		edges = append(edges, track.EdgeAppearingArtists)
+	}
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *TrackMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case track.EdgeAppearingArtists:
+		ids := make([]ent.Value, 0, len(m.appearing_artists))
+		for id := range m.appearing_artists {
+			ids = append(ids, id)
+		}
+		return ids
+	}
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *TrackMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 1)
+	if m.removedappearing_artists != nil {
+		edges = append(edges, track.EdgeAppearingArtists)
+	}
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *TrackMutation) RemovedIDs(name string) []ent.Value {
+	switch name {
+	case track.EdgeAppearingArtists:
+		ids := make([]ent.Value, 0, len(m.removedappearing_artists))
+		for id := range m.removedappearing_artists {
+			ids = append(ids, id)
+		}
+		return ids
+	}
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *TrackMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 1)
+	if m.clearedappearing_artists {
+		edges = append(edges, track.EdgeAppearingArtists)
+	}
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *TrackMutation) EdgeCleared(name string) bool {
+	switch name {
+	case track.EdgeAppearingArtists:
+		return m.clearedappearing_artists
+	}
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *TrackMutation) ClearEdge(name string) error {
+	switch name {
+	}
+	return fmt.Errorf("unknown Track unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *TrackMutation) ResetEdge(name string) error {
+	switch name {
+	case track.EdgeAppearingArtists:
+		m.ResetAppearingArtists()
+		return nil
+	}
+	return fmt.Errorf("unknown Track edge %s", name)
+}
+
+// TrackAppearanceMutation represents an operation that mutates the TrackAppearance nodes in the graph.
+type TrackAppearanceMutation struct {
+	config
+	op            Op
+	typ           string
+	_order        *int
+	add_order     *int
+	clearedFields map[string]struct{}
+	artist        *pid.ID
+	clearedartist bool
+	track         *pid.ID
+	clearedtrack  bool
+	done          bool
+	oldValue      func(context.Context) (*TrackAppearance, error)
+	predicates    []predicate.TrackAppearance
+}
+
+var _ ent.Mutation = (*TrackAppearanceMutation)(nil)
+
+// trackappearanceOption allows management of the mutation configuration using functional options.
+type trackappearanceOption func(*TrackAppearanceMutation)
+
+// newTrackAppearanceMutation creates new mutation for the TrackAppearance entity.
+func newTrackAppearanceMutation(c config, op Op, opts ...trackappearanceOption) *TrackAppearanceMutation {
+	m := &TrackAppearanceMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeTrackAppearance,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m TrackAppearanceMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m TrackAppearanceMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// SetTrackID sets the "track_id" field.
+func (m *TrackAppearanceMutation) SetTrackID(pi pid.ID) {
+	m.track = &pi
+}
+
+// TrackID returns the value of the "track_id" field in the mutation.
+func (m *TrackAppearanceMutation) TrackID() (r pid.ID, exists bool) {
+	v := m.track
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetTrackID resets all changes to the "track_id" field.
+func (m *TrackAppearanceMutation) ResetTrackID() {
+	m.track = nil
+}
+
+// SetArtistID sets the "artist_id" field.
+func (m *TrackAppearanceMutation) SetArtistID(pi pid.ID) {
+	m.artist = &pi
+}
+
+// ArtistID returns the value of the "artist_id" field in the mutation.
+func (m *TrackAppearanceMutation) ArtistID() (r pid.ID, exists bool) {
+	v := m.artist
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetArtistID resets all changes to the "artist_id" field.
+func (m *TrackAppearanceMutation) ResetArtistID() {
+	m.artist = nil
+}
+
+// SetOrder sets the "order" field.
+func (m *TrackAppearanceMutation) SetOrder(i int) {
+	m._order = &i
+	m.add_order = nil
+}
+
+// Order returns the value of the "order" field in the mutation.
+func (m *TrackAppearanceMutation) Order() (r int, exists bool) {
+	v := m._order
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// AddOrder adds i to the "order" field.
+func (m *TrackAppearanceMutation) AddOrder(i int) {
+	if m.add_order != nil {
+		*m.add_order += i
+	} else {
+		m.add_order = &i
+	}
+}
+
+// AddedOrder returns the value that was added to the "order" field in this mutation.
+func (m *TrackAppearanceMutation) AddedOrder() (r int, exists bool) {
+	v := m.add_order
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetOrder resets all changes to the "order" field.
+func (m *TrackAppearanceMutation) ResetOrder() {
+	m._order = nil
+	m.add_order = nil
+}
+
+// ClearArtist clears the "artist" edge to the Artist entity.
+func (m *TrackAppearanceMutation) ClearArtist() {
+	m.clearedartist = true
+	m.clearedFields[trackappearance.FieldArtistID] = struct{}{}
+}
+
+// ArtistCleared reports if the "artist" edge to the Artist entity was cleared.
+func (m *TrackAppearanceMutation) ArtistCleared() bool {
+	return m.clearedartist
+}
+
+// ArtistIDs returns the "artist" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// ArtistID instead. It exists only for internal usage by the builders.
+func (m *TrackAppearanceMutation) ArtistIDs() (ids []pid.ID) {
+	if id := m.artist; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetArtist resets all changes to the "artist" edge.
+func (m *TrackAppearanceMutation) ResetArtist() {
+	m.artist = nil
+	m.clearedartist = false
+}
+
+// ClearTrack clears the "track" edge to the Track entity.
+func (m *TrackAppearanceMutation) ClearTrack() {
+	m.clearedtrack = true
+	m.clearedFields[trackappearance.FieldTrackID] = struct{}{}
+}
+
+// TrackCleared reports if the "track" edge to the Track entity was cleared.
+func (m *TrackAppearanceMutation) TrackCleared() bool {
+	return m.clearedtrack
+}
+
+// TrackIDs returns the "track" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// TrackID instead. It exists only for internal usage by the builders.
+func (m *TrackAppearanceMutation) TrackIDs() (ids []pid.ID) {
+	if id := m.track; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetTrack resets all changes to the "track" edge.
+func (m *TrackAppearanceMutation) ResetTrack() {
+	m.track = nil
+	m.clearedtrack = false
+}
+
+// Where appends a list predicates to the TrackAppearanceMutation builder.
+func (m *TrackAppearanceMutation) Where(ps ...predicate.TrackAppearance) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the TrackAppearanceMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *TrackAppearanceMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.TrackAppearance, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *TrackAppearanceMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *TrackAppearanceMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (TrackAppearance).
+func (m *TrackAppearanceMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *TrackAppearanceMutation) Fields() []string {
+	fields := make([]string, 0, 3)
+	if m.track != nil {
+		fields = append(fields, trackappearance.FieldTrackID)
+	}
+	if m.artist != nil {
+		fields = append(fields, trackappearance.FieldArtistID)
+	}
+	if m._order != nil {
+		fields = append(fields, trackappearance.FieldOrder)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *TrackAppearanceMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case trackappearance.FieldTrackID:
+		return m.TrackID()
+	case trackappearance.FieldArtistID:
+		return m.ArtistID()
+	case trackappearance.FieldOrder:
+		return m.Order()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *TrackAppearanceMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	return nil, errors.New("edge schema TrackAppearance does not support getting old values")
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *TrackAppearanceMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case trackappearance.FieldTrackID:
+		v, ok := value.(pid.ID)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetTrackID(v)
+		return nil
+	case trackappearance.FieldArtistID:
+		v, ok := value.(pid.ID)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetArtistID(v)
+		return nil
+	case trackappearance.FieldOrder:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetOrder(v)
+		return nil
+	}
+	return fmt.Errorf("unknown TrackAppearance field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *TrackAppearanceMutation) AddedFields() []string {
+	var fields []string
+	if m.add_order != nil {
+		fields = append(fields, trackappearance.FieldOrder)
+	}
+	return fields
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *TrackAppearanceMutation) AddedField(name string) (ent.Value, bool) {
+	switch name {
+	case trackappearance.FieldOrder:
+		return m.AddedOrder()
+	}
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *TrackAppearanceMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	case trackappearance.FieldOrder:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddOrder(v)
+		return nil
+	}
+	return fmt.Errorf("unknown TrackAppearance numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *TrackAppearanceMutation) ClearedFields() []string {
+	return nil
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *TrackAppearanceMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *TrackAppearanceMutation) ClearField(name string) error {
+	return fmt.Errorf("unknown TrackAppearance nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *TrackAppearanceMutation) ResetField(name string) error {
+	switch name {
+	case trackappearance.FieldTrackID:
+		m.ResetTrackID()
+		return nil
+	case trackappearance.FieldArtistID:
+		m.ResetArtistID()
+		return nil
+	case trackappearance.FieldOrder:
+		m.ResetOrder()
+		return nil
+	}
+	return fmt.Errorf("unknown TrackAppearance field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *TrackAppearanceMutation) AddedEdges() []string {
+	edges := make([]string, 0, 2)
+	if m.artist != nil {
+		edges = append(edges, trackappearance.EdgeArtist)
+	}
+	if m.track != nil {
+		edges = append(edges, trackappearance.EdgeTrack)
+	}
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *TrackAppearanceMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case trackappearance.EdgeArtist:
+		if id := m.artist; id != nil {
+			return []ent.Value{*id}
+		}
+	case trackappearance.EdgeTrack:
+		if id := m.track; id != nil {
+			return []ent.Value{*id}
+		}
+	}
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *TrackAppearanceMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 2)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *TrackAppearanceMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *TrackAppearanceMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 2)
+	if m.clearedartist {
+		edges = append(edges, trackappearance.EdgeArtist)
+	}
+	if m.clearedtrack {
+		edges = append(edges, trackappearance.EdgeTrack)
+	}
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *TrackAppearanceMutation) EdgeCleared(name string) bool {
+	switch name {
+	case trackappearance.EdgeArtist:
+		return m.clearedartist
+	case trackappearance.EdgeTrack:
+		return m.clearedtrack
+	}
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *TrackAppearanceMutation) ClearEdge(name string) error {
+	switch name {
+	case trackappearance.EdgeArtist:
+		m.ClearArtist()
+		return nil
+	case trackappearance.EdgeTrack:
+		m.ClearTrack()
+		return nil
+	}
+	return fmt.Errorf("unknown TrackAppearance unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *TrackAppearanceMutation) ResetEdge(name string) error {
+	switch name {
+	case trackappearance.EdgeArtist:
+		m.ResetArtist()
+		return nil
+	case trackappearance.EdgeTrack:
+		m.ResetTrack()
+		return nil
+	}
+	return fmt.Errorf("unknown TrackAppearance edge %s", name)
+}
 
 // UserMutation represents an operation that mutates the User nodes in the graph.
 type UserMutation struct {
@@ -39,6 +3428,9 @@ type UserMutation struct {
 	is_admin      *bool
 	created_at    *time.Time
 	clearedFields map[string]struct{}
+	images        map[pid.ID]struct{}
+	removedimages map[pid.ID]struct{}
+	clearedimages bool
 	done          bool
 	oldValue      func(context.Context) (*User, error)
 	predicates    []predicate.User
@@ -292,6 +3684,60 @@ func (m *UserMutation) ResetCreatedAt() {
 	m.created_at = nil
 }
 
+// AddImageIDs adds the "images" edge to the Image entity by ids.
+func (m *UserMutation) AddImageIDs(ids ...pid.ID) {
+	if m.images == nil {
+		m.images = make(map[pid.ID]struct{})
+	}
+	for i := range ids {
+		m.images[ids[i]] = struct{}{}
+	}
+}
+
+// ClearImages clears the "images" edge to the Image entity.
+func (m *UserMutation) ClearImages() {
+	m.clearedimages = true
+}
+
+// ImagesCleared reports if the "images" edge to the Image entity was cleared.
+func (m *UserMutation) ImagesCleared() bool {
+	return m.clearedimages
+}
+
+// RemoveImageIDs removes the "images" edge to the Image entity by IDs.
+func (m *UserMutation) RemoveImageIDs(ids ...pid.ID) {
+	if m.removedimages == nil {
+		m.removedimages = make(map[pid.ID]struct{})
+	}
+	for i := range ids {
+		delete(m.images, ids[i])
+		m.removedimages[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedImages returns the removed IDs of the "images" edge to the Image entity.
+func (m *UserMutation) RemovedImagesIDs() (ids []pid.ID) {
+	for id := range m.removedimages {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ImagesIDs returns the "images" edge IDs in the mutation.
+func (m *UserMutation) ImagesIDs() (ids []pid.ID) {
+	for id := range m.images {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetImages resets all changes to the "images" edge.
+func (m *UserMutation) ResetImages() {
+	m.images = nil
+	m.clearedimages = false
+	m.removedimages = nil
+}
+
 // Where appends a list predicates to the UserMutation builder.
 func (m *UserMutation) Where(ps ...predicate.User) {
 	m.predicates = append(m.predicates, ps...)
@@ -476,48 +3922,84 @@ func (m *UserMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *UserMutation) AddedEdges() []string {
-	edges := make([]string, 0, 0)
+	edges := make([]string, 0, 1)
+	if m.images != nil {
+		edges = append(edges, user.EdgeImages)
+	}
 	return edges
 }
 
 // AddedIDs returns all IDs (to other nodes) that were added for the given edge
 // name in this mutation.
 func (m *UserMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case user.EdgeImages:
+		ids := make([]ent.Value, 0, len(m.images))
+		for id := range m.images {
+			ids = append(ids, id)
+		}
+		return ids
+	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *UserMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 0)
+	edges := make([]string, 0, 1)
+	if m.removedimages != nil {
+		edges = append(edges, user.EdgeImages)
+	}
 	return edges
 }
 
 // RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
 // the given name in this mutation.
 func (m *UserMutation) RemovedIDs(name string) []ent.Value {
+	switch name {
+	case user.EdgeImages:
+		ids := make([]ent.Value, 0, len(m.removedimages))
+		for id := range m.removedimages {
+			ids = append(ids, id)
+		}
+		return ids
+	}
 	return nil
 }
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *UserMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 0)
+	edges := make([]string, 0, 1)
+	if m.clearedimages {
+		edges = append(edges, user.EdgeImages)
+	}
 	return edges
 }
 
 // EdgeCleared returns a boolean which indicates if the edge with the given name
 // was cleared in this mutation.
 func (m *UserMutation) EdgeCleared(name string) bool {
+	switch name {
+	case user.EdgeImages:
+		return m.clearedimages
+	}
 	return false
 }
 
 // ClearEdge clears the value of the edge with the given name. It returns an error
 // if that edge is not defined in the schema.
 func (m *UserMutation) ClearEdge(name string) error {
+	switch name {
+	}
 	return fmt.Errorf("unknown User unique edge %s", name)
 }
 
 // ResetEdge resets all changes to the edge with the given name in this mutation.
 // It returns an error if the edge is not defined in the schema.
 func (m *UserMutation) ResetEdge(name string) error {
+	switch name {
+	case user.EdgeImages:
+		m.ResetImages()
+		return nil
+	}
 	return fmt.Errorf("unknown User edge %s", name)
 }

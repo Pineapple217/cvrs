@@ -1,13 +1,11 @@
 package pid
 
 import (
-	cryptoRand "crypto/rand"
-	"encoding/binary"
 	"encoding/json"
 	"fmt"
-	"log/slog"
 	"math/rand"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -24,19 +22,41 @@ const (
 	randomBits    = 20
 	randomBytes   = 3 // 3 bytes = 24 bits, mask to 20 bits
 	randomMask    = (1 << randomBits) - 1
+	maxAttempts   = 10
 )
+
+var (
+	mu         sync.Mutex
+	lastTs     int64
+	usedRandom = make(map[uint32]struct{}, 1<<randomBits)
+	prng       = rand.New(rand.NewSource(time.Now().UnixNano()))
+)
+
+func generateRandom() uint32 {
+	return uint32(prng.Int31()) & randomMask
+}
 
 func New() ID {
 	ts := int64(time.Now().UnixMilli()) & ((1 << timestampBits) - 1)
 
-	var buf [randomBytes]byte
-	if _, err := cryptoRand.Read(buf[:]); err != nil {
-		slog.Warn("Failed to use crypto rand, falling back to math rand", "err", err)
-		r := rand.Uint32() & randomMask
-		val := (ts << randomBits) | int64(r)
-		return ID(val)
+	var r uint32
+	for range maxAttempts {
+		r = generateRandom()
+
+		mu.Lock()
+		if ts != lastTs {
+			lastTs = ts
+			usedRandom = make(map[uint32]struct{})
+		}
+
+		if _, exists := usedRandom[r]; !exists {
+			usedRandom[r] = struct{}{}
+			mu.Unlock()
+			val := (ts << randomBits) | int64(r)
+			return ID(val)
+		}
+		mu.Unlock()
 	}
-	r := binary.BigEndian.Uint32(append([]byte{0}, buf[:]...)) & randomMask
 
 	val := (ts << randomBits) | int64(r)
 	return ID(val)

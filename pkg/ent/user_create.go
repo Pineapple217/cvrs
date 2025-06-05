@@ -10,6 +10,7 @@ import (
 
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"github.com/Pineapple217/cvrs/pkg/ent/image"
 	"github.com/Pineapple217/cvrs/pkg/ent/user"
 	"github.com/Pineapple217/cvrs/pkg/pid"
 )
@@ -73,6 +74,21 @@ func (uc *UserCreate) SetNillableID(pi *pid.ID) *UserCreate {
 		uc.SetID(*pi)
 	}
 	return uc
+}
+
+// AddImageIDs adds the "images" edge to the Image entity by IDs.
+func (uc *UserCreate) AddImageIDs(ids ...pid.ID) *UserCreate {
+	uc.mutation.AddImageIDs(ids...)
+	return uc
+}
+
+// AddImages adds the "images" edges to the Image entity.
+func (uc *UserCreate) AddImages(i ...*Image) *UserCreate {
+	ids := make([]pid.ID, len(i))
+	for j := range i {
+		ids[j] = i[j].ID
+	}
+	return uc.AddImageIDs(ids...)
 }
 
 // Mutation returns the UserMutation object of the builder.
@@ -195,6 +211,22 @@ func (uc *UserCreate) createSpec() (*User, *sqlgraph.CreateSpec) {
 	if value, ok := uc.mutation.CreatedAt(); ok {
 		_spec.SetField(user.FieldCreatedAt, field.TypeTime, value)
 		_node.CreatedAt = value
+	}
+	if nodes := uc.mutation.ImagesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.ImagesTable,
+			Columns: []string{user.ImagesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(image.FieldID, field.TypeInt64),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec
 }

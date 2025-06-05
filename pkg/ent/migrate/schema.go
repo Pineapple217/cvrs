@@ -8,6 +8,127 @@ import (
 )
 
 var (
+	// ArtistsColumns holds the columns for the "artists" table.
+	ArtistsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt64, Increment: true},
+		{Name: "name", Type: field.TypeString},
+		{Name: "mbid", Type: field.TypeUUID, Unique: true, Nullable: true},
+	}
+	// ArtistsTable holds the schema information for the "artists" table.
+	ArtistsTable = &schema.Table{
+		Name:       "artists",
+		Columns:    ArtistsColumns,
+		PrimaryKey: []*schema.Column{ArtistsColumns[0]},
+	}
+	// ImagesColumns holds the columns for the "images" table.
+	ImagesColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt64, Increment: true},
+		{Name: "file", Type: field.TypeString},
+		{Name: "type", Type: field.TypeEnum, Enums: []string{"webp", "png", "jpg"}},
+		{Name: "note", Type: field.TypeString, Nullable: true},
+		{Name: "dimentions", Type: field.TypeJSON},
+		{Name: "size_bits", Type: field.TypeUint32},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "deleted_at", Type: field.TypeTime, Nullable: true},
+		{Name: "release_image", Type: field.TypeInt64, Unique: true},
+		{Name: "user_images", Type: field.TypeInt64},
+	}
+	// ImagesTable holds the schema information for the "images" table.
+	ImagesTable = &schema.Table{
+		Name:       "images",
+		Columns:    ImagesColumns,
+		PrimaryKey: []*schema.Column{ImagesColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "images_releases_image",
+				Columns:    []*schema.Column{ImagesColumns[9]},
+				RefColumns: []*schema.Column{ReleasesColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+			{
+				Symbol:     "images_users_images",
+				Columns:    []*schema.Column{ImagesColumns[10]},
+				RefColumns: []*schema.Column{UsersColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+		},
+	}
+	// ReleasesColumns holds the columns for the "releases" table.
+	ReleasesColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt64, Increment: true},
+		{Name: "name", Type: field.TypeString},
+		{Name: "type", Type: field.TypeEnum, Enums: []string{"album", "single", "EP", "compilation"}},
+	}
+	// ReleasesTable holds the schema information for the "releases" table.
+	ReleasesTable = &schema.Table{
+		Name:       "releases",
+		Columns:    ReleasesColumns,
+		PrimaryKey: []*schema.Column{ReleasesColumns[0]},
+	}
+	// ReleaseAppearancesColumns holds the columns for the "release_appearances" table.
+	ReleaseAppearancesColumns = []*schema.Column{
+		{Name: "order", Type: field.TypeInt},
+		{Name: "artist_id", Type: field.TypeInt64},
+		{Name: "release_id", Type: field.TypeInt64},
+	}
+	// ReleaseAppearancesTable holds the schema information for the "release_appearances" table.
+	ReleaseAppearancesTable = &schema.Table{
+		Name:       "release_appearances",
+		Columns:    ReleaseAppearancesColumns,
+		PrimaryKey: []*schema.Column{ReleaseAppearancesColumns[1], ReleaseAppearancesColumns[2]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "release_appearances_artists_artist",
+				Columns:    []*schema.Column{ReleaseAppearancesColumns[1]},
+				RefColumns: []*schema.Column{ArtistsColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+			{
+				Symbol:     "release_appearances_releases_release",
+				Columns:    []*schema.Column{ReleaseAppearancesColumns[2]},
+				RefColumns: []*schema.Column{ReleasesColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+		},
+	}
+	// TracksColumns holds the columns for the "tracks" table.
+	TracksColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt64, Increment: true},
+		{Name: "title", Type: field.TypeString},
+	}
+	// TracksTable holds the schema information for the "tracks" table.
+	TracksTable = &schema.Table{
+		Name:       "tracks",
+		Columns:    TracksColumns,
+		PrimaryKey: []*schema.Column{TracksColumns[0]},
+	}
+	// TrackAppearancesColumns holds the columns for the "track_appearances" table.
+	TrackAppearancesColumns = []*schema.Column{
+		{Name: "order", Type: field.TypeInt},
+		{Name: "artist_id", Type: field.TypeInt64},
+		{Name: "track_id", Type: field.TypeInt64},
+	}
+	// TrackAppearancesTable holds the schema information for the "track_appearances" table.
+	TrackAppearancesTable = &schema.Table{
+		Name:       "track_appearances",
+		Columns:    TrackAppearancesColumns,
+		PrimaryKey: []*schema.Column{TrackAppearancesColumns[1], TrackAppearancesColumns[2]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "track_appearances_artists_artist",
+				Columns:    []*schema.Column{TrackAppearancesColumns[1]},
+				RefColumns: []*schema.Column{ArtistsColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+			{
+				Symbol:     "track_appearances_tracks_track",
+				Columns:    []*schema.Column{TrackAppearancesColumns[2]},
+				RefColumns: []*schema.Column{TracksColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+		},
+	}
 	// UsersColumns holds the columns for the "users" table.
 	UsersColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt64, Increment: true},
@@ -24,9 +145,21 @@ var (
 	}
 	// Tables holds all the tables in the schema.
 	Tables = []*schema.Table{
+		ArtistsTable,
+		ImagesTable,
+		ReleasesTable,
+		ReleaseAppearancesTable,
+		TracksTable,
+		TrackAppearancesTable,
 		UsersTable,
 	}
 )
 
 func init() {
+	ImagesTable.ForeignKeys[0].RefTable = ReleasesTable
+	ImagesTable.ForeignKeys[1].RefTable = UsersTable
+	ReleaseAppearancesTable.ForeignKeys[0].RefTable = ArtistsTable
+	ReleaseAppearancesTable.ForeignKeys[1].RefTable = ReleasesTable
+	TrackAppearancesTable.ForeignKeys[0].RefTable = ArtistsTable
+	TrackAppearancesTable.ForeignKeys[1].RefTable = TracksTable
 }

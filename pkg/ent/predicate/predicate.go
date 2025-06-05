@@ -6,5 +6,23 @@ import (
 	"entgo.io/ent/dialect/sql"
 )
 
+// Artist is the predicate function for artist builders.
+type Artist func(*sql.Selector)
+
+// Image is the predicate function for image builders.
+type Image func(*sql.Selector)
+
+// Release is the predicate function for release builders.
+type Release func(*sql.Selector)
+
+// ReleaseAppearance is the predicate function for releaseappearance builders.
+type ReleaseAppearance func(*sql.Selector)
+
+// Track is the predicate function for track builders.
+type Track func(*sql.Selector)
+
+// TrackAppearance is the predicate function for trackappearance builders.
+type TrackAppearance func(*sql.Selector)
+
 // User is the predicate function for user builders.
 type User func(*sql.Selector)

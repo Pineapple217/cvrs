@@ -25,8 +25,29 @@ type User struct {
 	// IsAdmin holds the value of the "is_admin" field.
 	IsAdmin bool `json:"is_admin"`
 	// CreatedAt holds the value of the "created_at" field.
-	CreatedAt    time.Time `json:"created_at,omitempty"`
+	CreatedAt time.Time `json:"created_at,omitempty"`
+	// Edges holds the relations/edges for other nodes in the graph.
+	// The values are being populated by the UserQuery when eager-loading is set.
+	Edges        UserEdges `json:"edges"`
 	selectValues sql.SelectValues
+}
+
+// UserEdges holds the relations/edges for other nodes in the graph.
+type UserEdges struct {
+	// Images holds the value of the images edge.
+	Images []*Image `json:"images,omitempty"`
+	// loadedTypes holds the information for reporting if a
+	// type was loaded (or requested) in eager-loading or not.
+	loadedTypes [1]bool
+}
+
+// ImagesOrErr returns the Images value or an error if the edge
+// was not loaded in eager-loading.
+func (e UserEdges) ImagesOrErr() ([]*Image, error) {
+	if e.loadedTypes[0] {
+		return e.Images, nil
+	}
+	return nil, &NotLoadedError{edge: "images"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -100,6 +121,11 @@ func (u *User) assignValues(columns []string, values []any) error {
 // This includes values selected through modifiers, order, etc.
 func (u *User) Value(name string) (ent.Value, error) {
 	return u.selectValues.Get(name)
+}
+
+// QueryImages queries the "images" edge of the User entity.
+func (u *User) QueryImages() *ImageQuery {
+	return NewUserClient(u.config).QueryImages(u)
 }
 
 // Update returns a builder for updating this User.
