@@ -10,7 +10,6 @@ import (
 	"github.com/Pineapple217/cvrs/pkg/database"
 	"github.com/Pineapple217/cvrs/pkg/handler"
 	"github.com/Pineapple217/cvrs/pkg/server"
-	"github.com/Pineapple217/cvrs/pkg/sources"
 	"github.com/Pineapple217/cvrs/pkg/users"
 	"github.com/Pineapple217/cvrs/pkg/util"
 	"github.com/spf13/cobra"
@@ -87,7 +86,6 @@ func main() {
 
 	rootCmd.AddCommand(cmdRun)
 	rootCmd.AddCommand(users.GetCmd())
-	rootCmd.AddCommand(sources.GetCmd())
 	if err := rootCmd.Execute(); err != nil {
 		slog.Error("Command execution failed", "error", err)
 		os.Exit(1)

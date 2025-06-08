@@ -20,6 +20,8 @@ type Track struct {
 	ID pid.ID `json:"id,omitempty"`
 	// Title holds the value of the "title" field.
 	Title string `json:"title,omitempty"`
+	// Position holds the value of the "position" field.
+	Position int `json:"position,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the TrackQuery when eager-loading is set.
 	Edges          TrackEdges `json:"edges"`
@@ -74,7 +76,7 @@ func (*Track) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case track.FieldID:
+		case track.FieldID, track.FieldPosition:
 			values[i] = new(sql.NullInt64)
 		case track.FieldTitle:
 			values[i] = new(sql.NullString)
@@ -106,6 +108,12 @@ func (t *Track) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field title", values[i])
 			} else if value.Valid {
 				t.Title = value.String
+			}
+		case track.FieldPosition:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field position", values[i])
+			} else if value.Valid {
+				t.Position = int(value.Int64)
 			}
 		case track.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
@@ -167,6 +175,9 @@ func (t *Track) String() string {
 	builder.WriteString(fmt.Sprintf("id=%v, ", t.ID))
 	builder.WriteString("title=")
 	builder.WriteString(t.Title)
+	builder.WriteString(", ")
+	builder.WriteString("position=")
+	builder.WriteString(fmt.Sprintf("%v", t.Position))
 	builder.WriteByte(')')
 	return builder.String()
 }

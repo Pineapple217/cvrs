@@ -19,8 +19,6 @@ type Artist struct {
 	ID pid.ID `json:"id,omitempty"`
 	// Name holds the value of the "name" field.
 	Name string `json:"name,omitempty"`
-	// Did holds the value of the "did" field.
-	Did *int64 `json:"did,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the ArtistQuery when eager-loading is set.
 	Edges        ArtistEdges `json:"edges"`
@@ -83,7 +81,7 @@ func (*Artist) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case artist.FieldID, artist.FieldDid:
+		case artist.FieldID:
 			values[i] = new(sql.NullInt64)
 		case artist.FieldName:
 			values[i] = new(sql.NullString)
@@ -113,13 +111,6 @@ func (a *Artist) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field name", values[i])
 			} else if value.Valid {
 				a.Name = value.String
-			}
-		case artist.FieldDid:
-			if value, ok := values[i].(*sql.NullInt64); !ok {
-				return fmt.Errorf("unexpected type %T for field did", values[i])
-			} else if value.Valid {
-				a.Did = new(int64)
-				*a.Did = value.Int64
 			}
 		default:
 			a.selectValues.Set(columns[i], values[i])
@@ -179,11 +170,6 @@ func (a *Artist) String() string {
 	builder.WriteString(fmt.Sprintf("id=%v, ", a.ID))
 	builder.WriteString("name=")
 	builder.WriteString(a.Name)
-	builder.WriteString(", ")
-	if v := a.Did; v != nil {
-		builder.WriteString("did=")
-		builder.WriteString(fmt.Sprintf("%v", *v))
-	}
 	builder.WriteByte(')')
 	return builder.String()
 }

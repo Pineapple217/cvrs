@@ -15,6 +15,8 @@ const (
 	FieldID = "id"
 	// FieldTitle holds the string denoting the title field in the database.
 	FieldTitle = "title"
+	// FieldPosition holds the string denoting the position field in the database.
+	FieldPosition = "position"
 	// EdgeAppearingArtists holds the string denoting the appearing_artists edge name in mutations.
 	EdgeAppearingArtists = "appearing_artists"
 	// EdgeRelease holds the string denoting the release edge name in mutations.
@@ -48,6 +50,7 @@ const (
 var Columns = []string{
 	FieldID,
 	FieldTitle,
+	FieldPosition,
 }
 
 // ForeignKeys holds the SQL foreign-keys that are owned by the "tracks"
@@ -80,6 +83,8 @@ func ValidColumn(column string) bool {
 var (
 	// TitleValidator is a validator for the "title" field. It is called by the builders before save.
 	TitleValidator func(string) error
+	// PositionValidator is a validator for the "position" field. It is called by the builders before save.
+	PositionValidator func(int) error
 	// DefaultID holds the default value on creation for the "id" field.
 	DefaultID func() pid.ID
 )
@@ -95,6 +100,11 @@ func ByID(opts ...sql.OrderTermOption) OrderOption {
 // ByTitle orders the results by the title field.
 func ByTitle(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldTitle, opts...).ToFunc()
+}
+
+// ByPosition orders the results by the position field.
+func ByPosition(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldPosition, opts...).ToFunc()
 }
 
 // ByAppearingArtistsCount orders the results by appearing_artists count.

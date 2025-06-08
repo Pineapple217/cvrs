@@ -12,7 +12,6 @@ var (
 	ArtistsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt64, Increment: true},
 		{Name: "name", Type: field.TypeString},
-		{Name: "did", Type: field.TypeInt64, Unique: true, Nullable: true},
 	}
 	// ArtistsTable holds the schema information for the "artists" table.
 	ArtistsTable = &schema.Table{
@@ -97,6 +96,7 @@ var (
 	TracksColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt64, Increment: true},
 		{Name: "title", Type: field.TypeString},
+		{Name: "position", Type: field.TypeInt},
 		{Name: "release_tracks", Type: field.TypeInt64},
 	}
 	// TracksTable holds the schema information for the "tracks" table.
@@ -107,7 +107,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "tracks_releases_tracks",
-				Columns:    []*schema.Column{TracksColumns[2]},
+				Columns:    []*schema.Column{TracksColumns[3]},
 				RefColumns: []*schema.Column{ReleasesColumns[0]},
 				OnDelete:   schema.NoAction,
 			},

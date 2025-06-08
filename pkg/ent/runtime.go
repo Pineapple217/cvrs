@@ -92,6 +92,10 @@ func init() {
 	trackDescTitle := trackFields[0].Descriptor()
 	// track.TitleValidator is a validator for the "title" field. It is called by the builders before save.
 	track.TitleValidator = trackDescTitle.Validators[0].(func(string) error)
+	// trackDescPosition is the schema descriptor for position field.
+	trackDescPosition := trackFields[1].Descriptor()
+	// track.PositionValidator is a validator for the "position" field. It is called by the builders before save.
+	track.PositionValidator = trackDescPosition.Validators[0].(func(int) error)
 	// trackDescID is the schema descriptor for id field.
 	trackDescID := trackMixinFields0[0].Descriptor()
 	// track.DefaultID holds the default value on creation for the id field.

@@ -28,6 +28,12 @@ func (tc *TrackCreate) SetTitle(s string) *TrackCreate {
 	return tc
 }
 
+// SetPosition sets the "position" field.
+func (tc *TrackCreate) SetPosition(i int) *TrackCreate {
+	tc.mutation.SetPosition(i)
+	return tc
+}
+
 // SetID sets the "id" field.
 func (tc *TrackCreate) SetID(pi pid.ID) *TrackCreate {
 	tc.mutation.SetID(pi)
@@ -119,6 +125,14 @@ func (tc *TrackCreate) check() error {
 			return &ValidationError{Name: "title", err: fmt.Errorf(`ent: validator failed for field "Track.title": %w`, err)}
 		}
 	}
+	if _, ok := tc.mutation.Position(); !ok {
+		return &ValidationError{Name: "position", err: errors.New(`ent: missing required field "Track.position"`)}
+	}
+	if v, ok := tc.mutation.Position(); ok {
+		if err := track.PositionValidator(v); err != nil {
+			return &ValidationError{Name: "position", err: fmt.Errorf(`ent: validator failed for field "Track.position": %w`, err)}
+		}
+	}
 	if len(tc.mutation.ReleaseIDs()) == 0 {
 		return &ValidationError{Name: "release", err: errors.New(`ent: missing required edge "Track.release"`)}
 	}
@@ -157,6 +171,10 @@ func (tc *TrackCreate) createSpec() (*Track, *sqlgraph.CreateSpec) {
 	if value, ok := tc.mutation.Title(); ok {
 		_spec.SetField(track.FieldTitle, field.TypeString, value)
 		_node.Title = value
+	}
+	if value, ok := tc.mutation.Position(); ok {
+		_spec.SetField(track.FieldPosition, field.TypeInt, value)
+		_node.Position = value
 	}
 	if nodes := tc.mutation.AppearingArtistsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{

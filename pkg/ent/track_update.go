@@ -44,6 +44,27 @@ func (tu *TrackUpdate) SetNillableTitle(s *string) *TrackUpdate {
 	return tu
 }
 
+// SetPosition sets the "position" field.
+func (tu *TrackUpdate) SetPosition(i int) *TrackUpdate {
+	tu.mutation.ResetPosition()
+	tu.mutation.SetPosition(i)
+	return tu
+}
+
+// SetNillablePosition sets the "position" field if the given value is not nil.
+func (tu *TrackUpdate) SetNillablePosition(i *int) *TrackUpdate {
+	if i != nil {
+		tu.SetPosition(*i)
+	}
+	return tu
+}
+
+// AddPosition adds i to the "position" field.
+func (tu *TrackUpdate) AddPosition(i int) *TrackUpdate {
+	tu.mutation.AddPosition(i)
+	return tu
+}
+
 // AddAppearingArtistIDs adds the "appearing_artists" edge to the Artist entity by IDs.
 func (tu *TrackUpdate) AddAppearingArtistIDs(ids ...pid.ID) *TrackUpdate {
 	tu.mutation.AddAppearingArtistIDs(ids...)
@@ -136,6 +157,11 @@ func (tu *TrackUpdate) check() error {
 			return &ValidationError{Name: "title", err: fmt.Errorf(`ent: validator failed for field "Track.title": %w`, err)}
 		}
 	}
+	if v, ok := tu.mutation.Position(); ok {
+		if err := track.PositionValidator(v); err != nil {
+			return &ValidationError{Name: "position", err: fmt.Errorf(`ent: validator failed for field "Track.position": %w`, err)}
+		}
+	}
 	if tu.mutation.ReleaseCleared() && len(tu.mutation.ReleaseIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "Track.release"`)
 	}
@@ -156,6 +182,12 @@ func (tu *TrackUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	}
 	if value, ok := tu.mutation.Title(); ok {
 		_spec.SetField(track.FieldTitle, field.TypeString, value)
+	}
+	if value, ok := tu.mutation.Position(); ok {
+		_spec.SetField(track.FieldPosition, field.TypeInt, value)
+	}
+	if value, ok := tu.mutation.AddedPosition(); ok {
+		_spec.AddField(track.FieldPosition, field.TypeInt, value)
 	}
 	if tu.mutation.AppearingArtistsCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -277,6 +309,27 @@ func (tuo *TrackUpdateOne) SetNillableTitle(s *string) *TrackUpdateOne {
 	return tuo
 }
 
+// SetPosition sets the "position" field.
+func (tuo *TrackUpdateOne) SetPosition(i int) *TrackUpdateOne {
+	tuo.mutation.ResetPosition()
+	tuo.mutation.SetPosition(i)
+	return tuo
+}
+
+// SetNillablePosition sets the "position" field if the given value is not nil.
+func (tuo *TrackUpdateOne) SetNillablePosition(i *int) *TrackUpdateOne {
+	if i != nil {
+		tuo.SetPosition(*i)
+	}
+	return tuo
+}
+
+// AddPosition adds i to the "position" field.
+func (tuo *TrackUpdateOne) AddPosition(i int) *TrackUpdateOne {
+	tuo.mutation.AddPosition(i)
+	return tuo
+}
+
 // AddAppearingArtistIDs adds the "appearing_artists" edge to the Artist entity by IDs.
 func (tuo *TrackUpdateOne) AddAppearingArtistIDs(ids ...pid.ID) *TrackUpdateOne {
 	tuo.mutation.AddAppearingArtistIDs(ids...)
@@ -382,6 +435,11 @@ func (tuo *TrackUpdateOne) check() error {
 			return &ValidationError{Name: "title", err: fmt.Errorf(`ent: validator failed for field "Track.title": %w`, err)}
 		}
 	}
+	if v, ok := tuo.mutation.Position(); ok {
+		if err := track.PositionValidator(v); err != nil {
+			return &ValidationError{Name: "position", err: fmt.Errorf(`ent: validator failed for field "Track.position": %w`, err)}
+		}
+	}
 	if tuo.mutation.ReleaseCleared() && len(tuo.mutation.ReleaseIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "Track.release"`)
 	}
@@ -419,6 +477,12 @@ func (tuo *TrackUpdateOne) sqlSave(ctx context.Context) (_node *Track, err error
 	}
 	if value, ok := tuo.mutation.Title(); ok {
 		_spec.SetField(track.FieldTitle, field.TypeString, value)
+	}
+	if value, ok := tuo.mutation.Position(); ok {
+		_spec.SetField(track.FieldPosition, field.TypeInt, value)
+	}
+	if value, ok := tuo.mutation.AddedPosition(); ok {
+		_spec.AddField(track.FieldPosition, field.TypeInt, value)
 	}
 	if tuo.mutation.AppearingArtistsCleared() {
 		edge := &sqlgraph.EdgeSpec{

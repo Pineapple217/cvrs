@@ -59,11 +59,6 @@ func Name(v string) predicate.Artist {
 	return predicate.Artist(sql.FieldEQ(FieldName, v))
 }
 
-// Did applies equality check predicate on the "did" field. It's identical to DidEQ.
-func Did(v int64) predicate.Artist {
-	return predicate.Artist(sql.FieldEQ(FieldDid, v))
-}
-
 // NameEQ applies the EQ predicate on the "name" field.
 func NameEQ(v string) predicate.Artist {
 	return predicate.Artist(sql.FieldEQ(FieldName, v))
@@ -127,56 +122,6 @@ func NameEqualFold(v string) predicate.Artist {
 // NameContainsFold applies the ContainsFold predicate on the "name" field.
 func NameContainsFold(v string) predicate.Artist {
 	return predicate.Artist(sql.FieldContainsFold(FieldName, v))
-}
-
-// DidEQ applies the EQ predicate on the "did" field.
-func DidEQ(v int64) predicate.Artist {
-	return predicate.Artist(sql.FieldEQ(FieldDid, v))
-}
-
-// DidNEQ applies the NEQ predicate on the "did" field.
-func DidNEQ(v int64) predicate.Artist {
-	return predicate.Artist(sql.FieldNEQ(FieldDid, v))
-}
-
-// DidIn applies the In predicate on the "did" field.
-func DidIn(vs ...int64) predicate.Artist {
-	return predicate.Artist(sql.FieldIn(FieldDid, vs...))
-}
-
-// DidNotIn applies the NotIn predicate on the "did" field.
-func DidNotIn(vs ...int64) predicate.Artist {
-	return predicate.Artist(sql.FieldNotIn(FieldDid, vs...))
-}
-
-// DidGT applies the GT predicate on the "did" field.
-func DidGT(v int64) predicate.Artist {
-	return predicate.Artist(sql.FieldGT(FieldDid, v))
-}
-
-// DidGTE applies the GTE predicate on the "did" field.
-func DidGTE(v int64) predicate.Artist {
-	return predicate.Artist(sql.FieldGTE(FieldDid, v))
-}
-
-// DidLT applies the LT predicate on the "did" field.
-func DidLT(v int64) predicate.Artist {
-	return predicate.Artist(sql.FieldLT(FieldDid, v))
-}
-
-// DidLTE applies the LTE predicate on the "did" field.
-func DidLTE(v int64) predicate.Artist {
-	return predicate.Artist(sql.FieldLTE(FieldDid, v))
-}
-
-// DidIsNil applies the IsNil predicate on the "did" field.
-func DidIsNil() predicate.Artist {
-	return predicate.Artist(sql.FieldIsNull(FieldDid))
-}
-
-// DidNotNil applies the NotNil predicate on the "did" field.
-func DidNotNil() predicate.Artist {
-	return predicate.Artist(sql.FieldNotNull(FieldDid))
 }
 
 // HasAppearingTracks applies the HasEdge predicate on the "appearing_tracks" edge.

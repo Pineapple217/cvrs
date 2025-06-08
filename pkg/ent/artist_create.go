@@ -28,20 +28,6 @@ func (ac *ArtistCreate) SetName(s string) *ArtistCreate {
 	return ac
 }
 
-// SetDid sets the "did" field.
-func (ac *ArtistCreate) SetDid(i int64) *ArtistCreate {
-	ac.mutation.SetDid(i)
-	return ac
-}
-
-// SetNillableDid sets the "did" field if the given value is not nil.
-func (ac *ArtistCreate) SetNillableDid(i *int64) *ArtistCreate {
-	if i != nil {
-		ac.SetDid(*i)
-	}
-	return ac
-}
-
 // SetID sets the "id" field.
 func (ac *ArtistCreate) SetID(pi pid.ID) *ArtistCreate {
 	ac.mutation.SetID(pi)
@@ -172,10 +158,6 @@ func (ac *ArtistCreate) createSpec() (*Artist, *sqlgraph.CreateSpec) {
 	if value, ok := ac.mutation.Name(); ok {
 		_spec.SetField(artist.FieldName, field.TypeString, value)
 		_node.Name = value
-	}
-	if value, ok := ac.mutation.Did(); ok {
-		_spec.SetField(artist.FieldDid, field.TypeInt64, value)
-		_node.Did = &value
 	}
 	if nodes := ac.mutation.AppearingTracksIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{

@@ -59,6 +59,11 @@ func Title(v string) predicate.Track {
 	return predicate.Track(sql.FieldEQ(FieldTitle, v))
 }
 
+// Position applies equality check predicate on the "position" field. It's identical to PositionEQ.
+func Position(v int) predicate.Track {
+	return predicate.Track(sql.FieldEQ(FieldPosition, v))
+}
+
 // TitleEQ applies the EQ predicate on the "title" field.
 func TitleEQ(v string) predicate.Track {
 	return predicate.Track(sql.FieldEQ(FieldTitle, v))
@@ -122,6 +127,46 @@ func TitleEqualFold(v string) predicate.Track {
 // TitleContainsFold applies the ContainsFold predicate on the "title" field.
 func TitleContainsFold(v string) predicate.Track {
 	return predicate.Track(sql.FieldContainsFold(FieldTitle, v))
+}
+
+// PositionEQ applies the EQ predicate on the "position" field.
+func PositionEQ(v int) predicate.Track {
+	return predicate.Track(sql.FieldEQ(FieldPosition, v))
+}
+
+// PositionNEQ applies the NEQ predicate on the "position" field.
+func PositionNEQ(v int) predicate.Track {
+	return predicate.Track(sql.FieldNEQ(FieldPosition, v))
+}
+
+// PositionIn applies the In predicate on the "position" field.
+func PositionIn(vs ...int) predicate.Track {
+	return predicate.Track(sql.FieldIn(FieldPosition, vs...))
+}
+
+// PositionNotIn applies the NotIn predicate on the "position" field.
+func PositionNotIn(vs ...int) predicate.Track {
+	return predicate.Track(sql.FieldNotIn(FieldPosition, vs...))
+}
+
+// PositionGT applies the GT predicate on the "position" field.
+func PositionGT(v int) predicate.Track {
+	return predicate.Track(sql.FieldGT(FieldPosition, v))
+}
+
+// PositionGTE applies the GTE predicate on the "position" field.
+func PositionGTE(v int) predicate.Track {
+	return predicate.Track(sql.FieldGTE(FieldPosition, v))
+}
+
+// PositionLT applies the LT predicate on the "position" field.
+func PositionLT(v int) predicate.Track {
+	return predicate.Track(sql.FieldLT(FieldPosition, v))
+}
+
+// PositionLTE applies the LTE predicate on the "position" field.
+func PositionLTE(v int) predicate.Track {
+	return predicate.Track(sql.FieldLTE(FieldPosition, v))
 }
 
 // HasAppearingArtists applies the HasEdge predicate on the "appearing_artists" edge.

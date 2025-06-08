@@ -16,10 +16,6 @@ func (Artist) Fields() []ent.Field {
 	return []ent.Field{
 		field.String("name").
 			NotEmpty(),
-		field.Int64("did").
-			Optional().
-			Nillable().
-			Unique(),
 	}
 }
 

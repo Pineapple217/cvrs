@@ -47,8 +47,6 @@ type ArtistMutation struct {
 	typ                       string
 	id                        *pid.ID
 	name                      *string
-	did                       *int64
-	adddid                    *int64
 	clearedFields             map[string]struct{}
 	appearing_tracks          map[pid.ID]struct{}
 	removedappearing_tracks   map[pid.ID]struct{}
@@ -201,76 +199,6 @@ func (m *ArtistMutation) ResetName() {
 	m.name = nil
 }
 
-// SetDid sets the "did" field.
-func (m *ArtistMutation) SetDid(i int64) {
-	m.did = &i
-	m.adddid = nil
-}
-
-// Did returns the value of the "did" field in the mutation.
-func (m *ArtistMutation) Did() (r int64, exists bool) {
-	v := m.did
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldDid returns the old "did" field's value of the Artist entity.
-// If the Artist object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *ArtistMutation) OldDid(ctx context.Context) (v *int64, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldDid is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldDid requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldDid: %w", err)
-	}
-	return oldValue.Did, nil
-}
-
-// AddDid adds i to the "did" field.
-func (m *ArtistMutation) AddDid(i int64) {
-	if m.adddid != nil {
-		*m.adddid += i
-	} else {
-		m.adddid = &i
-	}
-}
-
-// AddedDid returns the value that was added to the "did" field in this mutation.
-func (m *ArtistMutation) AddedDid() (r int64, exists bool) {
-	v := m.adddid
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// ClearDid clears the value of the "did" field.
-func (m *ArtistMutation) ClearDid() {
-	m.did = nil
-	m.adddid = nil
-	m.clearedFields[artist.FieldDid] = struct{}{}
-}
-
-// DidCleared returns if the "did" field was cleared in this mutation.
-func (m *ArtistMutation) DidCleared() bool {
-	_, ok := m.clearedFields[artist.FieldDid]
-	return ok
-}
-
-// ResetDid resets all changes to the "did" field.
-func (m *ArtistMutation) ResetDid() {
-	m.did = nil
-	m.adddid = nil
-	delete(m.clearedFields, artist.FieldDid)
-}
-
 // AddAppearingTrackIDs adds the "appearing_tracks" edge to the Track entity by ids.
 func (m *ArtistMutation) AddAppearingTrackIDs(ids ...pid.ID) {
 	if m.appearing_tracks == nil {
@@ -413,12 +341,9 @@ func (m *ArtistMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *ArtistMutation) Fields() []string {
-	fields := make([]string, 0, 2)
+	fields := make([]string, 0, 1)
 	if m.name != nil {
 		fields = append(fields, artist.FieldName)
-	}
-	if m.did != nil {
-		fields = append(fields, artist.FieldDid)
 	}
 	return fields
 }
@@ -430,8 +355,6 @@ func (m *ArtistMutation) Field(name string) (ent.Value, bool) {
 	switch name {
 	case artist.FieldName:
 		return m.Name()
-	case artist.FieldDid:
-		return m.Did()
 	}
 	return nil, false
 }
@@ -443,8 +366,6 @@ func (m *ArtistMutation) OldField(ctx context.Context, name string) (ent.Value, 
 	switch name {
 	case artist.FieldName:
 		return m.OldName(ctx)
-	case artist.FieldDid:
-		return m.OldDid(ctx)
 	}
 	return nil, fmt.Errorf("unknown Artist field %s", name)
 }
@@ -461,13 +382,6 @@ func (m *ArtistMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetName(v)
 		return nil
-	case artist.FieldDid:
-		v, ok := value.(int64)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetDid(v)
-		return nil
 	}
 	return fmt.Errorf("unknown Artist field %s", name)
 }
@@ -475,21 +389,13 @@ func (m *ArtistMutation) SetField(name string, value ent.Value) error {
 // AddedFields returns all numeric fields that were incremented/decremented during
 // this mutation.
 func (m *ArtistMutation) AddedFields() []string {
-	var fields []string
-	if m.adddid != nil {
-		fields = append(fields, artist.FieldDid)
-	}
-	return fields
+	return nil
 }
 
 // AddedField returns the numeric value that was incremented/decremented on a field
 // with the given name. The second boolean return value indicates that this field
 // was not set, or was not defined in the schema.
 func (m *ArtistMutation) AddedField(name string) (ent.Value, bool) {
-	switch name {
-	case artist.FieldDid:
-		return m.AddedDid()
-	}
 	return nil, false
 }
 
@@ -498,13 +404,6 @@ func (m *ArtistMutation) AddedField(name string) (ent.Value, bool) {
 // type.
 func (m *ArtistMutation) AddField(name string, value ent.Value) error {
 	switch name {
-	case artist.FieldDid:
-		v, ok := value.(int64)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.AddDid(v)
-		return nil
 	}
 	return fmt.Errorf("unknown Artist numeric field %s", name)
 }
@@ -512,11 +411,7 @@ func (m *ArtistMutation) AddField(name string, value ent.Value) error {
 // ClearedFields returns all nullable fields that were cleared during this
 // mutation.
 func (m *ArtistMutation) ClearedFields() []string {
-	var fields []string
-	if m.FieldCleared(artist.FieldDid) {
-		fields = append(fields, artist.FieldDid)
-	}
-	return fields
+	return nil
 }
 
 // FieldCleared returns a boolean indicating if a field with the given name was
@@ -529,11 +424,6 @@ func (m *ArtistMutation) FieldCleared(name string) bool {
 // ClearField clears the value of the field with the given name. It returns an
 // error if the field is not defined in the schema.
 func (m *ArtistMutation) ClearField(name string) error {
-	switch name {
-	case artist.FieldDid:
-		m.ClearDid()
-		return nil
-	}
 	return fmt.Errorf("unknown Artist nullable field %s", name)
 }
 
@@ -543,9 +433,6 @@ func (m *ArtistMutation) ResetField(name string) error {
 	switch name {
 	case artist.FieldName:
 		m.ResetName()
-		return nil
-	case artist.FieldDid:
-		m.ResetDid()
 		return nil
 	}
 	return fmt.Errorf("unknown Artist field %s", name)
@@ -2722,6 +2609,8 @@ type TrackMutation struct {
 	typ                      string
 	id                       *pid.ID
 	title                    *string
+	position                 *int
+	addposition              *int
 	clearedFields            map[string]struct{}
 	appearing_artists        map[pid.ID]struct{}
 	removedappearing_artists map[pid.ID]struct{}
@@ -2873,6 +2762,62 @@ func (m *TrackMutation) ResetTitle() {
 	m.title = nil
 }
 
+// SetPosition sets the "position" field.
+func (m *TrackMutation) SetPosition(i int) {
+	m.position = &i
+	m.addposition = nil
+}
+
+// Position returns the value of the "position" field in the mutation.
+func (m *TrackMutation) Position() (r int, exists bool) {
+	v := m.position
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldPosition returns the old "position" field's value of the Track entity.
+// If the Track object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TrackMutation) OldPosition(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPosition is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPosition requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPosition: %w", err)
+	}
+	return oldValue.Position, nil
+}
+
+// AddPosition adds i to the "position" field.
+func (m *TrackMutation) AddPosition(i int) {
+	if m.addposition != nil {
+		*m.addposition += i
+	} else {
+		m.addposition = &i
+	}
+}
+
+// AddedPosition returns the value that was added to the "position" field in this mutation.
+func (m *TrackMutation) AddedPosition() (r int, exists bool) {
+	v := m.addposition
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetPosition resets all changes to the "position" field.
+func (m *TrackMutation) ResetPosition() {
+	m.position = nil
+	m.addposition = nil
+}
+
 // AddAppearingArtistIDs adds the "appearing_artists" edge to the Artist entity by ids.
 func (m *TrackMutation) AddAppearingArtistIDs(ids ...pid.ID) {
 	if m.appearing_artists == nil {
@@ -3000,9 +2945,12 @@ func (m *TrackMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *TrackMutation) Fields() []string {
-	fields := make([]string, 0, 1)
+	fields := make([]string, 0, 2)
 	if m.title != nil {
 		fields = append(fields, track.FieldTitle)
+	}
+	if m.position != nil {
+		fields = append(fields, track.FieldPosition)
 	}
 	return fields
 }
@@ -3014,6 +2962,8 @@ func (m *TrackMutation) Field(name string) (ent.Value, bool) {
 	switch name {
 	case track.FieldTitle:
 		return m.Title()
+	case track.FieldPosition:
+		return m.Position()
 	}
 	return nil, false
 }
@@ -3025,6 +2975,8 @@ func (m *TrackMutation) OldField(ctx context.Context, name string) (ent.Value, e
 	switch name {
 	case track.FieldTitle:
 		return m.OldTitle(ctx)
+	case track.FieldPosition:
+		return m.OldPosition(ctx)
 	}
 	return nil, fmt.Errorf("unknown Track field %s", name)
 }
@@ -3041,6 +2993,13 @@ func (m *TrackMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetTitle(v)
 		return nil
+	case track.FieldPosition:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetPosition(v)
+		return nil
 	}
 	return fmt.Errorf("unknown Track field %s", name)
 }
@@ -3048,13 +3007,21 @@ func (m *TrackMutation) SetField(name string, value ent.Value) error {
 // AddedFields returns all numeric fields that were incremented/decremented during
 // this mutation.
 func (m *TrackMutation) AddedFields() []string {
-	return nil
+	var fields []string
+	if m.addposition != nil {
+		fields = append(fields, track.FieldPosition)
+	}
+	return fields
 }
 
 // AddedField returns the numeric value that was incremented/decremented on a field
 // with the given name. The second boolean return value indicates that this field
 // was not set, or was not defined in the schema.
 func (m *TrackMutation) AddedField(name string) (ent.Value, bool) {
+	switch name {
+	case track.FieldPosition:
+		return m.AddedPosition()
+	}
 	return nil, false
 }
 
@@ -3063,6 +3030,13 @@ func (m *TrackMutation) AddedField(name string) (ent.Value, bool) {
 // type.
 func (m *TrackMutation) AddField(name string, value ent.Value) error {
 	switch name {
+	case track.FieldPosition:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddPosition(v)
+		return nil
 	}
 	return fmt.Errorf("unknown Track numeric field %s", name)
 }
@@ -3092,6 +3066,9 @@ func (m *TrackMutation) ResetField(name string) error {
 	switch name {
 	case track.FieldTitle:
 		m.ResetTitle()
+		return nil
+	case track.FieldPosition:
+		m.ResetPosition()
 		return nil
 	}
 	return fmt.Errorf("unknown Track field %s", name)
