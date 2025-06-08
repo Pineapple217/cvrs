@@ -3,6 +3,8 @@
 package release
 
 import (
+	"time"
+
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/Pineapple217/cvrs/pkg/ent/predicate"
@@ -57,6 +59,11 @@ func IDLTE(id pid.ID) predicate.Release {
 // Name applies equality check predicate on the "name" field. It's identical to NameEQ.
 func Name(v string) predicate.Release {
 	return predicate.Release(sql.FieldEQ(FieldName, v))
+}
+
+// ReleaseDate applies equality check predicate on the "release_date" field. It's identical to ReleaseDateEQ.
+func ReleaseDate(v time.Time) predicate.Release {
+	return predicate.Release(sql.FieldEQ(FieldReleaseDate, v))
 }
 
 // NameEQ applies the EQ predicate on the "name" field.
@@ -144,6 +151,46 @@ func TypeNotIn(vs ...Type) predicate.Release {
 	return predicate.Release(sql.FieldNotIn(FieldType, vs...))
 }
 
+// ReleaseDateEQ applies the EQ predicate on the "release_date" field.
+func ReleaseDateEQ(v time.Time) predicate.Release {
+	return predicate.Release(sql.FieldEQ(FieldReleaseDate, v))
+}
+
+// ReleaseDateNEQ applies the NEQ predicate on the "release_date" field.
+func ReleaseDateNEQ(v time.Time) predicate.Release {
+	return predicate.Release(sql.FieldNEQ(FieldReleaseDate, v))
+}
+
+// ReleaseDateIn applies the In predicate on the "release_date" field.
+func ReleaseDateIn(vs ...time.Time) predicate.Release {
+	return predicate.Release(sql.FieldIn(FieldReleaseDate, vs...))
+}
+
+// ReleaseDateNotIn applies the NotIn predicate on the "release_date" field.
+func ReleaseDateNotIn(vs ...time.Time) predicate.Release {
+	return predicate.Release(sql.FieldNotIn(FieldReleaseDate, vs...))
+}
+
+// ReleaseDateGT applies the GT predicate on the "release_date" field.
+func ReleaseDateGT(v time.Time) predicate.Release {
+	return predicate.Release(sql.FieldGT(FieldReleaseDate, v))
+}
+
+// ReleaseDateGTE applies the GTE predicate on the "release_date" field.
+func ReleaseDateGTE(v time.Time) predicate.Release {
+	return predicate.Release(sql.FieldGTE(FieldReleaseDate, v))
+}
+
+// ReleaseDateLT applies the LT predicate on the "release_date" field.
+func ReleaseDateLT(v time.Time) predicate.Release {
+	return predicate.Release(sql.FieldLT(FieldReleaseDate, v))
+}
+
+// ReleaseDateLTE applies the LTE predicate on the "release_date" field.
+func ReleaseDateLTE(v time.Time) predicate.Release {
+	return predicate.Release(sql.FieldLTE(FieldReleaseDate, v))
+}
+
 // HasImage applies the HasEdge predicate on the "image" edge.
 func HasImage() predicate.Release {
 	return predicate.Release(func(s *sql.Selector) {
@@ -159,6 +206,29 @@ func HasImage() predicate.Release {
 func HasImageWith(preds ...predicate.Image) predicate.Release {
 	return predicate.Release(func(s *sql.Selector) {
 		step := newImageStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasTracks applies the HasEdge predicate on the "tracks" edge.
+func HasTracks() predicate.Release {
+	return predicate.Release(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, TracksTable, TracksColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasTracksWith applies the HasEdge predicate on the "tracks" edge with a given conditions (other predicates).
+func HasTracksWith(preds ...predicate.Track) predicate.Release {
+	return predicate.Release(func(s *sql.Selector) {
+		step := newTracksStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)

@@ -19,8 +19,12 @@ const (
 	FieldName = "name"
 	// FieldType holds the string denoting the type field in the database.
 	FieldType = "type"
+	// FieldReleaseDate holds the string denoting the release_date field in the database.
+	FieldReleaseDate = "release_date"
 	// EdgeImage holds the string denoting the image edge name in mutations.
 	EdgeImage = "image"
+	// EdgeTracks holds the string denoting the tracks edge name in mutations.
+	EdgeTracks = "tracks"
 	// EdgeAppearingArtists holds the string denoting the appearing_artists edge name in mutations.
 	EdgeAppearingArtists = "appearing_artists"
 	// EdgeReleaseAppearance holds the string denoting the release_appearance edge name in mutations.
@@ -34,6 +38,13 @@ const (
 	ImageInverseTable = "images"
 	// ImageColumn is the table column denoting the image relation/edge.
 	ImageColumn = "release_image"
+	// TracksTable is the table that holds the tracks relation/edge.
+	TracksTable = "tracks"
+	// TracksInverseTable is the table name for the Track entity.
+	// It exists in this package in order to avoid circular dependency with the "track" package.
+	TracksInverseTable = "tracks"
+	// TracksColumn is the table column denoting the tracks relation/edge.
+	TracksColumn = "release_tracks"
 	// AppearingArtistsTable is the table that holds the appearing_artists relation/edge. The primary key declared below.
 	AppearingArtistsTable = "release_appearances"
 	// AppearingArtistsInverseTable is the table name for the Artist entity.
@@ -53,6 +64,7 @@ var Columns = []string{
 	FieldID,
 	FieldName,
 	FieldType,
+	FieldReleaseDate,
 }
 
 var (
@@ -87,6 +99,7 @@ const (
 	TypeSingle      Type = "single"
 	TypeEP          Type = "EP"
 	TypeCompilation Type = "compilation"
+	TypeUnknown     Type = "unknown"
 )
 
 func (_type Type) String() string {
@@ -96,7 +109,7 @@ func (_type Type) String() string {
 // TypeValidator is a validator for the "type" field enum values. It is called by the builders before save.
 func TypeValidator(_type Type) error {
 	switch _type {
-	case TypeAlbum, TypeSingle, TypeEP, TypeCompilation:
+	case TypeAlbum, TypeSingle, TypeEP, TypeCompilation, TypeUnknown:
 		return nil
 	default:
 		return fmt.Errorf("release: invalid enum value for type field: %q", _type)
@@ -121,10 +134,29 @@ func ByType(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldType, opts...).ToFunc()
 }
 
+// ByReleaseDate orders the results by the release_date field.
+func ByReleaseDate(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldReleaseDate, opts...).ToFunc()
+}
+
 // ByImageField orders the results by image field.
 func ByImageField(field string, opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
 		sqlgraph.OrderByNeighborTerms(s, newImageStep(), sql.OrderByField(field, opts...))
+	}
+}
+
+// ByTracksCount orders the results by tracks count.
+func ByTracksCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newTracksStep(), opts...)
+	}
+}
+
+// ByTracks orders the results by tracks terms.
+func ByTracks(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newTracksStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
 
@@ -160,6 +192,13 @@ func newImageStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(ImageInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2O, false, ImageTable, ImageColumn),
+	)
+}
+func newTracksStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(TracksInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, TracksTable, TracksColumn),
 	)
 }
 func newAppearingArtistsStep() *sqlgraph.Step {

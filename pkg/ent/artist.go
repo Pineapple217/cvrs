@@ -10,7 +10,6 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"github.com/Pineapple217/cvrs/pkg/ent/artist"
 	"github.com/Pineapple217/cvrs/pkg/pid"
-	"github.com/google/uuid"
 )
 
 // Artist is the model entity for the Artist schema.
@@ -20,8 +19,8 @@ type Artist struct {
 	ID pid.ID `json:"id,omitempty"`
 	// Name holds the value of the "name" field.
 	Name string `json:"name,omitempty"`
-	// Mbid holds the value of the "mbid" field.
-	Mbid *uuid.UUID `json:"mbid,omitempty"`
+	// Did holds the value of the "did" field.
+	Did *int64 `json:"did,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the ArtistQuery when eager-loading is set.
 	Edges        ArtistEdges `json:"edges"`
@@ -84,9 +83,7 @@ func (*Artist) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case artist.FieldMbid:
-			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
-		case artist.FieldID:
+		case artist.FieldID, artist.FieldDid:
 			values[i] = new(sql.NullInt64)
 		case artist.FieldName:
 			values[i] = new(sql.NullString)
@@ -117,12 +114,12 @@ func (a *Artist) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				a.Name = value.String
 			}
-		case artist.FieldMbid:
-			if value, ok := values[i].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field mbid", values[i])
+		case artist.FieldDid:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field did", values[i])
 			} else if value.Valid {
-				a.Mbid = new(uuid.UUID)
-				*a.Mbid = *value.S.(*uuid.UUID)
+				a.Did = new(int64)
+				*a.Did = value.Int64
 			}
 		default:
 			a.selectValues.Set(columns[i], values[i])
@@ -183,8 +180,8 @@ func (a *Artist) String() string {
 	builder.WriteString("name=")
 	builder.WriteString(a.Name)
 	builder.WriteString(", ")
-	if v := a.Mbid; v != nil {
-		builder.WriteString("mbid=")
+	if v := a.Did; v != nil {
+		builder.WriteString("did=")
 		builder.WriteString(fmt.Sprintf("%v", *v))
 	}
 	builder.WriteByte(')')

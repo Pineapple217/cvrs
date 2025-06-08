@@ -13,7 +13,6 @@ import (
 	"github.com/Pineapple217/cvrs/pkg/ent/release"
 	"github.com/Pineapple217/cvrs/pkg/ent/track"
 	"github.com/Pineapple217/cvrs/pkg/pid"
-	"github.com/google/uuid"
 )
 
 // ArtistCreate is the builder for creating a Artist entity.
@@ -29,16 +28,16 @@ func (ac *ArtistCreate) SetName(s string) *ArtistCreate {
 	return ac
 }
 
-// SetMbid sets the "mbid" field.
-func (ac *ArtistCreate) SetMbid(u uuid.UUID) *ArtistCreate {
-	ac.mutation.SetMbid(u)
+// SetDid sets the "did" field.
+func (ac *ArtistCreate) SetDid(i int64) *ArtistCreate {
+	ac.mutation.SetDid(i)
 	return ac
 }
 
-// SetNillableMbid sets the "mbid" field if the given value is not nil.
-func (ac *ArtistCreate) SetNillableMbid(u *uuid.UUID) *ArtistCreate {
-	if u != nil {
-		ac.SetMbid(*u)
+// SetNillableDid sets the "did" field if the given value is not nil.
+func (ac *ArtistCreate) SetNillableDid(i *int64) *ArtistCreate {
+	if i != nil {
+		ac.SetDid(*i)
 	}
 	return ac
 }
@@ -174,9 +173,9 @@ func (ac *ArtistCreate) createSpec() (*Artist, *sqlgraph.CreateSpec) {
 		_spec.SetField(artist.FieldName, field.TypeString, value)
 		_node.Name = value
 	}
-	if value, ok := ac.mutation.Mbid(); ok {
-		_spec.SetField(artist.FieldMbid, field.TypeUUID, value)
-		_node.Mbid = &value
+	if value, ok := ac.mutation.Did(); ok {
+		_spec.SetField(artist.FieldDid, field.TypeInt64, value)
+		_node.Did = &value
 	}
 	if nodes := ac.mutation.AppearingTracksIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{

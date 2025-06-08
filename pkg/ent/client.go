@@ -744,6 +744,22 @@ func (c *ReleaseClient) QueryImage(r *Release) *ImageQuery {
 	return query
 }
 
+// QueryTracks queries the tracks edge of a Release.
+func (c *ReleaseClient) QueryTracks(r *Release) *TrackQuery {
+	query := (&TrackClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := r.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(release.Table, release.FieldID, id),
+			sqlgraph.To(track.Table, track.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, release.TracksTable, release.TracksColumn),
+		)
+		fromV = sqlgraph.Neighbors(r.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // QueryAppearingArtists queries the appearing_artists edge of a Release.
 func (c *ReleaseClient) QueryAppearingArtists(r *Release) *ArtistQuery {
 	query := (&ArtistClient{config: c.config}).Query()
@@ -1034,6 +1050,22 @@ func (c *TrackClient) QueryAppearingArtists(t *Track) *ArtistQuery {
 			sqlgraph.From(track.Table, track.FieldID, id),
 			sqlgraph.To(artist.Table, artist.FieldID),
 			sqlgraph.Edge(sqlgraph.M2M, true, track.AppearingArtistsTable, track.AppearingArtistsPrimaryKey...),
+		)
+		fromV = sqlgraph.Neighbors(t.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryRelease queries the release edge of a Track.
+func (c *TrackClient) QueryRelease(t *Track) *ReleaseQuery {
+	query := (&ReleaseClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := t.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(track.Table, track.FieldID, id),
+			sqlgraph.To(release.Table, release.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, track.ReleaseTable, track.ReleaseColumn),
 		)
 		fromV = sqlgraph.Neighbors(t.driver.Dialect(), step)
 		return fromV, nil

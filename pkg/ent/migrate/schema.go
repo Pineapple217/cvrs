@@ -12,7 +12,7 @@ var (
 	ArtistsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt64, Increment: true},
 		{Name: "name", Type: field.TypeString},
-		{Name: "mbid", Type: field.TypeUUID, Unique: true, Nullable: true},
+		{Name: "did", Type: field.TypeInt64, Unique: true, Nullable: true},
 	}
 	// ArtistsTable holds the schema information for the "artists" table.
 	ArtistsTable = &schema.Table{
@@ -58,7 +58,8 @@ var (
 	ReleasesColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt64, Increment: true},
 		{Name: "name", Type: field.TypeString},
-		{Name: "type", Type: field.TypeEnum, Enums: []string{"album", "single", "EP", "compilation"}},
+		{Name: "type", Type: field.TypeEnum, Enums: []string{"album", "single", "EP", "compilation", "unknown"}},
+		{Name: "release_date", Type: field.TypeTime},
 	}
 	// ReleasesTable holds the schema information for the "releases" table.
 	ReleasesTable = &schema.Table{
@@ -96,12 +97,21 @@ var (
 	TracksColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt64, Increment: true},
 		{Name: "title", Type: field.TypeString},
+		{Name: "release_tracks", Type: field.TypeInt64},
 	}
 	// TracksTable holds the schema information for the "tracks" table.
 	TracksTable = &schema.Table{
 		Name:       "tracks",
 		Columns:    TracksColumns,
 		PrimaryKey: []*schema.Column{TracksColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "tracks_releases_tracks",
+				Columns:    []*schema.Column{TracksColumns[2]},
+				RefColumns: []*schema.Column{ReleasesColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+		},
 	}
 	// TrackAppearancesColumns holds the columns for the "track_appearances" table.
 	TrackAppearancesColumns = []*schema.Column{
@@ -160,6 +170,7 @@ func init() {
 	ImagesTable.ForeignKeys[1].RefTable = UsersTable
 	ReleaseAppearancesTable.ForeignKeys[0].RefTable = ArtistsTable
 	ReleaseAppearancesTable.ForeignKeys[1].RefTable = ReleasesTable
+	TracksTable.ForeignKeys[0].RefTable = ReleasesTable
 	TrackAppearancesTable.ForeignKeys[0].RefTable = ArtistsTable
 	TrackAppearancesTable.ForeignKeys[1].RefTable = TracksTable
 }

@@ -17,6 +17,7 @@ import (
 	"github.com/Pineapple217/cvrs/pkg/ent/predicate"
 	"github.com/Pineapple217/cvrs/pkg/ent/release"
 	"github.com/Pineapple217/cvrs/pkg/ent/releaseappearance"
+	"github.com/Pineapple217/cvrs/pkg/ent/track"
 	"github.com/Pineapple217/cvrs/pkg/pid"
 )
 
@@ -28,6 +29,7 @@ type ReleaseQuery struct {
 	inters                []Interceptor
 	predicates            []predicate.Release
 	withImage             *ImageQuery
+	withTracks            *TrackQuery
 	withAppearingArtists  *ArtistQuery
 	withReleaseAppearance *ReleaseAppearanceQuery
 	// intermediate query (i.e. traversal path).
@@ -81,6 +83,28 @@ func (rq *ReleaseQuery) QueryImage() *ImageQuery {
 			sqlgraph.From(release.Table, release.FieldID, selector),
 			sqlgraph.To(image.Table, image.FieldID),
 			sqlgraph.Edge(sqlgraph.O2O, false, release.ImageTable, release.ImageColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(rq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryTracks chains the current query on the "tracks" edge.
+func (rq *ReleaseQuery) QueryTracks() *TrackQuery {
+	query := (&TrackClient{config: rq.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := rq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := rq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(release.Table, release.FieldID, selector),
+			sqlgraph.To(track.Table, track.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, release.TracksTable, release.TracksColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(rq.driver.Dialect(), step)
 		return fromU, nil
@@ -325,6 +349,7 @@ func (rq *ReleaseQuery) Clone() *ReleaseQuery {
 		inters:                append([]Interceptor{}, rq.inters...),
 		predicates:            append([]predicate.Release{}, rq.predicates...),
 		withImage:             rq.withImage.Clone(),
+		withTracks:            rq.withTracks.Clone(),
 		withAppearingArtists:  rq.withAppearingArtists.Clone(),
 		withReleaseAppearance: rq.withReleaseAppearance.Clone(),
 		// clone intermediate query.
@@ -341,6 +366,17 @@ func (rq *ReleaseQuery) WithImage(opts ...func(*ImageQuery)) *ReleaseQuery {
 		opt(query)
 	}
 	rq.withImage = query
+	return rq
+}
+
+// WithTracks tells the query-builder to eager-load the nodes that are connected to
+// the "tracks" edge. The optional arguments are used to configure the query builder of the edge.
+func (rq *ReleaseQuery) WithTracks(opts ...func(*TrackQuery)) *ReleaseQuery {
+	query := (&TrackClient{config: rq.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	rq.withTracks = query
 	return rq
 }
 
@@ -444,8 +480,9 @@ func (rq *ReleaseQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Rele
 	var (
 		nodes       = []*Release{}
 		_spec       = rq.querySpec()
-		loadedTypes = [3]bool{
+		loadedTypes = [4]bool{
 			rq.withImage != nil,
+			rq.withTracks != nil,
 			rq.withAppearingArtists != nil,
 			rq.withReleaseAppearance != nil,
 		}
@@ -471,6 +508,13 @@ func (rq *ReleaseQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Rele
 	if query := rq.withImage; query != nil {
 		if err := rq.loadImage(ctx, query, nodes, nil,
 			func(n *Release, e *Image) { n.Edges.Image = e }); err != nil {
+			return nil, err
+		}
+	}
+	if query := rq.withTracks; query != nil {
+		if err := rq.loadTracks(ctx, query, nodes,
+			func(n *Release) { n.Edges.Tracks = []*Track{} },
+			func(n *Release, e *Track) { n.Edges.Tracks = append(n.Edges.Tracks, e) }); err != nil {
 			return nil, err
 		}
 	}
@@ -516,6 +560,37 @@ func (rq *ReleaseQuery) loadImage(ctx context.Context, query *ImageQuery, nodes 
 		node, ok := nodeids[*fk]
 		if !ok {
 			return fmt.Errorf(`unexpected referenced foreign-key "release_image" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (rq *ReleaseQuery) loadTracks(ctx context.Context, query *TrackQuery, nodes []*Release, init func(*Release), assign func(*Release, *Track)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[pid.ID]*Release)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	query.withFKs = true
+	query.Where(predicate.Track(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(release.TracksColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.release_tracks
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "release_tracks" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "release_tracks" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}

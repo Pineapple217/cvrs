@@ -15,8 +15,8 @@ const (
 	FieldID = "id"
 	// FieldName holds the string denoting the name field in the database.
 	FieldName = "name"
-	// FieldMbid holds the string denoting the mbid field in the database.
-	FieldMbid = "mbid"
+	// FieldDid holds the string denoting the did field in the database.
+	FieldDid = "did"
 	// EdgeAppearingTracks holds the string denoting the appearing_tracks edge name in mutations.
 	EdgeAppearingTracks = "appearing_tracks"
 	// EdgeAppearingReleases holds the string denoting the appearing_releases edge name in mutations.
@@ -57,7 +57,7 @@ const (
 var Columns = []string{
 	FieldID,
 	FieldName,
-	FieldMbid,
+	FieldDid,
 }
 
 var (
@@ -99,9 +99,9 @@ func ByName(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldName, opts...).ToFunc()
 }
 
-// ByMbid orders the results by the mbid field.
-func ByMbid(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldMbid, opts...).ToFunc()
+// ByDid orders the results by the did field.
+func ByDid(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldDid, opts...).ToFunc()
 }
 
 // ByAppearingTracksCount orders the results by appearing_tracks count.

@@ -14,6 +14,7 @@ import (
 	"entgo.io/ent/schema/field"
 	"github.com/Pineapple217/cvrs/pkg/ent/artist"
 	"github.com/Pineapple217/cvrs/pkg/ent/predicate"
+	"github.com/Pineapple217/cvrs/pkg/ent/release"
 	"github.com/Pineapple217/cvrs/pkg/ent/track"
 	"github.com/Pineapple217/cvrs/pkg/ent/trackappearance"
 	"github.com/Pineapple217/cvrs/pkg/pid"
@@ -27,7 +28,9 @@ type TrackQuery struct {
 	inters               []Interceptor
 	predicates           []predicate.Track
 	withAppearingArtists *ArtistQuery
+	withRelease          *ReleaseQuery
 	withAppearance       *TrackAppearanceQuery
+	withFKs              bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -79,6 +82,28 @@ func (tq *TrackQuery) QueryAppearingArtists() *ArtistQuery {
 			sqlgraph.From(track.Table, track.FieldID, selector),
 			sqlgraph.To(artist.Table, artist.FieldID),
 			sqlgraph.Edge(sqlgraph.M2M, true, track.AppearingArtistsTable, track.AppearingArtistsPrimaryKey...),
+		)
+		fromU = sqlgraph.SetNeighbors(tq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryRelease chains the current query on the "release" edge.
+func (tq *TrackQuery) QueryRelease() *ReleaseQuery {
+	query := (&ReleaseClient{config: tq.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := tq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := tq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(track.Table, track.FieldID, selector),
+			sqlgraph.To(release.Table, release.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, track.ReleaseTable, track.ReleaseColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(tq.driver.Dialect(), step)
 		return fromU, nil
@@ -301,6 +326,7 @@ func (tq *TrackQuery) Clone() *TrackQuery {
 		inters:               append([]Interceptor{}, tq.inters...),
 		predicates:           append([]predicate.Track{}, tq.predicates...),
 		withAppearingArtists: tq.withAppearingArtists.Clone(),
+		withRelease:          tq.withRelease.Clone(),
 		withAppearance:       tq.withAppearance.Clone(),
 		// clone intermediate query.
 		sql:  tq.sql.Clone(),
@@ -316,6 +342,17 @@ func (tq *TrackQuery) WithAppearingArtists(opts ...func(*ArtistQuery)) *TrackQue
 		opt(query)
 	}
 	tq.withAppearingArtists = query
+	return tq
+}
+
+// WithRelease tells the query-builder to eager-load the nodes that are connected to
+// the "release" edge. The optional arguments are used to configure the query builder of the edge.
+func (tq *TrackQuery) WithRelease(opts ...func(*ReleaseQuery)) *TrackQuery {
+	query := (&ReleaseClient{config: tq.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	tq.withRelease = query
 	return tq
 }
 
@@ -407,12 +444,20 @@ func (tq *TrackQuery) prepareQuery(ctx context.Context) error {
 func (tq *TrackQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Track, error) {
 	var (
 		nodes       = []*Track{}
+		withFKs     = tq.withFKs
 		_spec       = tq.querySpec()
-		loadedTypes = [2]bool{
+		loadedTypes = [3]bool{
 			tq.withAppearingArtists != nil,
+			tq.withRelease != nil,
 			tq.withAppearance != nil,
 		}
 	)
+	if tq.withRelease != nil {
+		withFKs = true
+	}
+	if withFKs {
+		_spec.Node.Columns = append(_spec.Node.Columns, track.ForeignKeys...)
+	}
 	_spec.ScanValues = func(columns []string) ([]any, error) {
 		return (*Track).scanValues(nil, columns)
 	}
@@ -435,6 +480,12 @@ func (tq *TrackQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Track,
 		if err := tq.loadAppearingArtists(ctx, query, nodes,
 			func(n *Track) { n.Edges.AppearingArtists = []*Artist{} },
 			func(n *Track, e *Artist) { n.Edges.AppearingArtists = append(n.Edges.AppearingArtists, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := tq.withRelease; query != nil {
+		if err := tq.loadRelease(ctx, query, nodes, nil,
+			func(n *Track, e *Release) { n.Edges.Release = e }); err != nil {
 			return nil, err
 		}
 	}
@@ -505,6 +556,38 @@ func (tq *TrackQuery) loadAppearingArtists(ctx context.Context, query *ArtistQue
 		}
 		for kn := range nodes {
 			assign(kn, n)
+		}
+	}
+	return nil
+}
+func (tq *TrackQuery) loadRelease(ctx context.Context, query *ReleaseQuery, nodes []*Track, init func(*Track), assign func(*Track, *Release)) error {
+	ids := make([]pid.ID, 0, len(nodes))
+	nodeids := make(map[pid.ID][]*Track)
+	for i := range nodes {
+		if nodes[i].release_tracks == nil {
+			continue
+		}
+		fk := *nodes[i].release_tracks
+		if _, ok := nodeids[fk]; !ok {
+			ids = append(ids, fk)
+		}
+		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+	query.Where(release.IDIn(ids...))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		nodes, ok := nodeids[n.ID]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "release_tracks" returned %v`, n.ID)
+		}
+		for i := range nodes {
+			assign(nodes[i], n)
 		}
 	}
 	return nil

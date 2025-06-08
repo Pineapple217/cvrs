@@ -5,6 +5,7 @@ package ent
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
@@ -22,6 +23,8 @@ type Release struct {
 	Name string `json:"name,omitempty"`
 	// Type holds the value of the "type" field.
 	Type release.Type `json:"type,omitempty"`
+	// ReleaseDate holds the value of the "release_date" field.
+	ReleaseDate time.Time `json:"release_date,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the ReleaseQuery when eager-loading is set.
 	Edges        ReleaseEdges `json:"edges"`
@@ -32,13 +35,15 @@ type Release struct {
 type ReleaseEdges struct {
 	// Image holds the value of the image edge.
 	Image *Image `json:"image,omitempty"`
+	// Tracks holds the value of the tracks edge.
+	Tracks []*Track `json:"tracks,omitempty"`
 	// AppearingArtists holds the value of the appearing_artists edge.
 	AppearingArtists []*Artist `json:"appearing_artists,omitempty"`
 	// ReleaseAppearance holds the value of the release_appearance edge.
 	ReleaseAppearance []*ReleaseAppearance `json:"release_appearance,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [3]bool
+	loadedTypes [4]bool
 }
 
 // ImageOrErr returns the Image value or an error if the edge
@@ -52,10 +57,19 @@ func (e ReleaseEdges) ImageOrErr() (*Image, error) {
 	return nil, &NotLoadedError{edge: "image"}
 }
 
+// TracksOrErr returns the Tracks value or an error if the edge
+// was not loaded in eager-loading.
+func (e ReleaseEdges) TracksOrErr() ([]*Track, error) {
+	if e.loadedTypes[1] {
+		return e.Tracks, nil
+	}
+	return nil, &NotLoadedError{edge: "tracks"}
+}
+
 // AppearingArtistsOrErr returns the AppearingArtists value or an error if the edge
 // was not loaded in eager-loading.
 func (e ReleaseEdges) AppearingArtistsOrErr() ([]*Artist, error) {
-	if e.loadedTypes[1] {
+	if e.loadedTypes[2] {
 		return e.AppearingArtists, nil
 	}
 	return nil, &NotLoadedError{edge: "appearing_artists"}
@@ -64,7 +78,7 @@ func (e ReleaseEdges) AppearingArtistsOrErr() ([]*Artist, error) {
 // ReleaseAppearanceOrErr returns the ReleaseAppearance value or an error if the edge
 // was not loaded in eager-loading.
 func (e ReleaseEdges) ReleaseAppearanceOrErr() ([]*ReleaseAppearance, error) {
-	if e.loadedTypes[2] {
+	if e.loadedTypes[3] {
 		return e.ReleaseAppearance, nil
 	}
 	return nil, &NotLoadedError{edge: "release_appearance"}
@@ -79,6 +93,8 @@ func (*Release) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullInt64)
 		case release.FieldName, release.FieldType:
 			values[i] = new(sql.NullString)
+		case release.FieldReleaseDate:
+			values[i] = new(sql.NullTime)
 		default:
 			values[i] = new(sql.UnknownType)
 		}
@@ -112,6 +128,12 @@ func (r *Release) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				r.Type = release.Type(value.String)
 			}
+		case release.FieldReleaseDate:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field release_date", values[i])
+			} else if value.Valid {
+				r.ReleaseDate = value.Time
+			}
 		default:
 			r.selectValues.Set(columns[i], values[i])
 		}
@@ -128,6 +150,11 @@ func (r *Release) Value(name string) (ent.Value, error) {
 // QueryImage queries the "image" edge of the Release entity.
 func (r *Release) QueryImage() *ImageQuery {
 	return NewReleaseClient(r.config).QueryImage(r)
+}
+
+// QueryTracks queries the "tracks" edge of the Release entity.
+func (r *Release) QueryTracks() *TrackQuery {
+	return NewReleaseClient(r.config).QueryTracks(r)
 }
 
 // QueryAppearingArtists queries the "appearing_artists" edge of the Release entity.
@@ -168,6 +195,9 @@ func (r *Release) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("type=")
 	builder.WriteString(fmt.Sprintf("%v", r.Type))
+	builder.WriteString(", ")
+	builder.WriteString("release_date=")
+	builder.WriteString(r.ReleaseDate.Format(time.ANSIC))
 	builder.WriteByte(')')
 	return builder.String()
 }

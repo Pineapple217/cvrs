@@ -15,7 +15,6 @@ import (
 	"github.com/Pineapple217/cvrs/pkg/ent/release"
 	"github.com/Pineapple217/cvrs/pkg/ent/track"
 	"github.com/Pineapple217/cvrs/pkg/pid"
-	"github.com/google/uuid"
 )
 
 // ArtistUpdate is the builder for updating Artist entities.
@@ -45,23 +44,30 @@ func (au *ArtistUpdate) SetNillableName(s *string) *ArtistUpdate {
 	return au
 }
 
-// SetMbid sets the "mbid" field.
-func (au *ArtistUpdate) SetMbid(u uuid.UUID) *ArtistUpdate {
-	au.mutation.SetMbid(u)
+// SetDid sets the "did" field.
+func (au *ArtistUpdate) SetDid(i int64) *ArtistUpdate {
+	au.mutation.ResetDid()
+	au.mutation.SetDid(i)
 	return au
 }
 
-// SetNillableMbid sets the "mbid" field if the given value is not nil.
-func (au *ArtistUpdate) SetNillableMbid(u *uuid.UUID) *ArtistUpdate {
-	if u != nil {
-		au.SetMbid(*u)
+// SetNillableDid sets the "did" field if the given value is not nil.
+func (au *ArtistUpdate) SetNillableDid(i *int64) *ArtistUpdate {
+	if i != nil {
+		au.SetDid(*i)
 	}
 	return au
 }
 
-// ClearMbid clears the value of the "mbid" field.
-func (au *ArtistUpdate) ClearMbid() *ArtistUpdate {
-	au.mutation.ClearMbid()
+// AddDid adds i to the "did" field.
+func (au *ArtistUpdate) AddDid(i int64) *ArtistUpdate {
+	au.mutation.AddDid(i)
+	return au
+}
+
+// ClearDid clears the value of the "did" field.
+func (au *ArtistUpdate) ClearDid() *ArtistUpdate {
+	au.mutation.ClearDid()
 	return au
 }
 
@@ -194,11 +200,14 @@ func (au *ArtistUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	if value, ok := au.mutation.Name(); ok {
 		_spec.SetField(artist.FieldName, field.TypeString, value)
 	}
-	if value, ok := au.mutation.Mbid(); ok {
-		_spec.SetField(artist.FieldMbid, field.TypeUUID, value)
+	if value, ok := au.mutation.Did(); ok {
+		_spec.SetField(artist.FieldDid, field.TypeInt64, value)
 	}
-	if au.mutation.MbidCleared() {
-		_spec.ClearField(artist.FieldMbid, field.TypeUUID)
+	if value, ok := au.mutation.AddedDid(); ok {
+		_spec.AddField(artist.FieldDid, field.TypeInt64, value)
+	}
+	if au.mutation.DidCleared() {
+		_spec.ClearField(artist.FieldDid, field.TypeInt64)
 	}
 	if au.mutation.AppearingTracksCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -348,23 +357,30 @@ func (auo *ArtistUpdateOne) SetNillableName(s *string) *ArtistUpdateOne {
 	return auo
 }
 
-// SetMbid sets the "mbid" field.
-func (auo *ArtistUpdateOne) SetMbid(u uuid.UUID) *ArtistUpdateOne {
-	auo.mutation.SetMbid(u)
+// SetDid sets the "did" field.
+func (auo *ArtistUpdateOne) SetDid(i int64) *ArtistUpdateOne {
+	auo.mutation.ResetDid()
+	auo.mutation.SetDid(i)
 	return auo
 }
 
-// SetNillableMbid sets the "mbid" field if the given value is not nil.
-func (auo *ArtistUpdateOne) SetNillableMbid(u *uuid.UUID) *ArtistUpdateOne {
-	if u != nil {
-		auo.SetMbid(*u)
+// SetNillableDid sets the "did" field if the given value is not nil.
+func (auo *ArtistUpdateOne) SetNillableDid(i *int64) *ArtistUpdateOne {
+	if i != nil {
+		auo.SetDid(*i)
 	}
 	return auo
 }
 
-// ClearMbid clears the value of the "mbid" field.
-func (auo *ArtistUpdateOne) ClearMbid() *ArtistUpdateOne {
-	auo.mutation.ClearMbid()
+// AddDid adds i to the "did" field.
+func (auo *ArtistUpdateOne) AddDid(i int64) *ArtistUpdateOne {
+	auo.mutation.AddDid(i)
+	return auo
+}
+
+// ClearDid clears the value of the "did" field.
+func (auo *ArtistUpdateOne) ClearDid() *ArtistUpdateOne {
+	auo.mutation.ClearDid()
 	return auo
 }
 
@@ -527,11 +543,14 @@ func (auo *ArtistUpdateOne) sqlSave(ctx context.Context) (_node *Artist, err err
 	if value, ok := auo.mutation.Name(); ok {
 		_spec.SetField(artist.FieldName, field.TypeString, value)
 	}
-	if value, ok := auo.mutation.Mbid(); ok {
-		_spec.SetField(artist.FieldMbid, field.TypeUUID, value)
+	if value, ok := auo.mutation.Did(); ok {
+		_spec.SetField(artist.FieldDid, field.TypeInt64, value)
 	}
-	if auo.mutation.MbidCleared() {
-		_spec.ClearField(artist.FieldMbid, field.TypeUUID)
+	if value, ok := auo.mutation.AddedDid(); ok {
+		_spec.AddField(artist.FieldDid, field.TypeInt64, value)
+	}
+	if auo.mutation.DidCleared() {
+		_spec.ClearField(artist.FieldDid, field.TypeInt64)
 	}
 	if auo.mutation.AppearingTracksCleared() {
 		edge := &sqlgraph.EdgeSpec{

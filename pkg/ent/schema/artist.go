@@ -4,7 +4,6 @@ import (
 	"entgo.io/ent"
 	"entgo.io/ent/schema/edge"
 	"entgo.io/ent/schema/field"
-	"github.com/google/uuid"
 )
 
 // Artist holds the schema definition for the Artist entity.
@@ -17,7 +16,7 @@ func (Artist) Fields() []ent.Field {
 	return []ent.Field{
 		field.String("name").
 			NotEmpty(),
-		field.UUID("mbid", uuid.UUID{}).
+		field.Int64("did").
 			Optional().
 			Nillable().
 			Unique(),

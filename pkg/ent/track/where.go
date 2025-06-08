@@ -147,6 +147,29 @@ func HasAppearingArtistsWith(preds ...predicate.Artist) predicate.Track {
 	})
 }
 
+// HasRelease applies the HasEdge predicate on the "release" edge.
+func HasRelease() predicate.Track {
+	return predicate.Track(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, ReleaseTable, ReleaseColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasReleaseWith applies the HasEdge predicate on the "release" edge with a given conditions (other predicates).
+func HasReleaseWith(preds ...predicate.Release) predicate.Track {
+	return predicate.Track(func(s *sql.Selector) {
+		step := newReleaseStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
 // HasAppearance applies the HasEdge predicate on the "appearance" edge.
 func HasAppearance() predicate.Track {
 	return predicate.Track(func(s *sql.Selector) {

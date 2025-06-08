@@ -10,6 +10,7 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/Pineapple217/cvrs/pkg/ent/artist"
+	"github.com/Pineapple217/cvrs/pkg/ent/release"
 	"github.com/Pineapple217/cvrs/pkg/ent/track"
 	"github.com/Pineapple217/cvrs/pkg/pid"
 )
@@ -54,6 +55,17 @@ func (tc *TrackCreate) AddAppearingArtists(a ...*Artist) *TrackCreate {
 		ids[i] = a[i].ID
 	}
 	return tc.AddAppearingArtistIDs(ids...)
+}
+
+// SetReleaseID sets the "release" edge to the Release entity by ID.
+func (tc *TrackCreate) SetReleaseID(id pid.ID) *TrackCreate {
+	tc.mutation.SetReleaseID(id)
+	return tc
+}
+
+// SetRelease sets the "release" edge to the Release entity.
+func (tc *TrackCreate) SetRelease(r *Release) *TrackCreate {
+	return tc.SetReleaseID(r.ID)
 }
 
 // Mutation returns the TrackMutation object of the builder.
@@ -106,6 +118,9 @@ func (tc *TrackCreate) check() error {
 		if err := track.TitleValidator(v); err != nil {
 			return &ValidationError{Name: "title", err: fmt.Errorf(`ent: validator failed for field "Track.title": %w`, err)}
 		}
+	}
+	if len(tc.mutation.ReleaseIDs()) == 0 {
+		return &ValidationError{Name: "release", err: errors.New(`ent: missing required edge "Track.release"`)}
 	}
 	return nil
 }
@@ -161,6 +176,23 @@ func (tc *TrackCreate) createSpec() (*Track, *sqlgraph.CreateSpec) {
 		createE.defaults()
 		_, specE := createE.createSpec()
 		edge.Target.Fields = specE.Fields
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := tc.mutation.ReleaseIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   track.ReleaseTable,
+			Columns: []string{track.ReleaseColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(release.FieldID, field.TypeInt64),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.release_tracks = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec

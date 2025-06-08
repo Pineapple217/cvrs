@@ -16,6 +16,8 @@ func (Track) Fields() []ent.Field {
 	return []ent.Field{
 		field.String("title").
 			NotEmpty(),
+		field.Int("position").
+			Positive(),
 	}
 }
 
@@ -25,6 +27,10 @@ func (Track) Edges() []ent.Edge {
 		edge.From("appearing_artists", Artist.Type).
 			Ref("appearing_tracks").
 			Through("appearance", TrackAppearance.Type),
+		edge.From("release", Release.Type).
+			Ref("tracks").
+			Unique().
+			Required(),
 	}
 }
 

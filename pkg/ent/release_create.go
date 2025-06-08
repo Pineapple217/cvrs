@@ -6,12 +6,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/Pineapple217/cvrs/pkg/ent/artist"
 	"github.com/Pineapple217/cvrs/pkg/ent/image"
 	"github.com/Pineapple217/cvrs/pkg/ent/release"
+	"github.com/Pineapple217/cvrs/pkg/ent/track"
 	"github.com/Pineapple217/cvrs/pkg/pid"
 )
 
@@ -31,6 +33,12 @@ func (rc *ReleaseCreate) SetName(s string) *ReleaseCreate {
 // SetType sets the "type" field.
 func (rc *ReleaseCreate) SetType(r release.Type) *ReleaseCreate {
 	rc.mutation.SetType(r)
+	return rc
+}
+
+// SetReleaseDate sets the "release_date" field.
+func (rc *ReleaseCreate) SetReleaseDate(t time.Time) *ReleaseCreate {
+	rc.mutation.SetReleaseDate(t)
 	return rc
 }
 
@@ -65,6 +73,21 @@ func (rc *ReleaseCreate) SetNillableImageID(id *pid.ID) *ReleaseCreate {
 // SetImage sets the "image" edge to the Image entity.
 func (rc *ReleaseCreate) SetImage(i *Image) *ReleaseCreate {
 	return rc.SetImageID(i.ID)
+}
+
+// AddTrackIDs adds the "tracks" edge to the Track entity by IDs.
+func (rc *ReleaseCreate) AddTrackIDs(ids ...pid.ID) *ReleaseCreate {
+	rc.mutation.AddTrackIDs(ids...)
+	return rc
+}
+
+// AddTracks adds the "tracks" edges to the Track entity.
+func (rc *ReleaseCreate) AddTracks(t ...*Track) *ReleaseCreate {
+	ids := make([]pid.ID, len(t))
+	for i := range t {
+		ids[i] = t[i].ID
+	}
+	return rc.AddTrackIDs(ids...)
 }
 
 // AddAppearingArtistIDs adds the "appearing_artists" edge to the Artist entity by IDs.
@@ -141,6 +164,9 @@ func (rc *ReleaseCreate) check() error {
 			return &ValidationError{Name: "type", err: fmt.Errorf(`ent: validator failed for field "Release.type": %w`, err)}
 		}
 	}
+	if _, ok := rc.mutation.ReleaseDate(); !ok {
+		return &ValidationError{Name: "release_date", err: errors.New(`ent: missing required field "Release.release_date"`)}
+	}
 	return nil
 }
 
@@ -181,6 +207,10 @@ func (rc *ReleaseCreate) createSpec() (*Release, *sqlgraph.CreateSpec) {
 		_spec.SetField(release.FieldType, field.TypeEnum, value)
 		_node.Type = value
 	}
+	if value, ok := rc.mutation.ReleaseDate(); ok {
+		_spec.SetField(release.FieldReleaseDate, field.TypeTime, value)
+		_node.ReleaseDate = value
+	}
 	if nodes := rc.mutation.ImageIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
@@ -190,6 +220,22 @@ func (rc *ReleaseCreate) createSpec() (*Release, *sqlgraph.CreateSpec) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(image.FieldID, field.TypeInt64),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := rc.mutation.TracksIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   release.TracksTable,
+			Columns: []string{release.TracksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(track.FieldID, field.TypeInt64),
 			},
 		}
 		for _, k := range nodes {

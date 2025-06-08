@@ -12,6 +12,7 @@ import (
 	"entgo.io/ent/schema/field"
 	"github.com/Pineapple217/cvrs/pkg/ent/artist"
 	"github.com/Pineapple217/cvrs/pkg/ent/predicate"
+	"github.com/Pineapple217/cvrs/pkg/ent/release"
 	"github.com/Pineapple217/cvrs/pkg/ent/track"
 	"github.com/Pineapple217/cvrs/pkg/pid"
 )
@@ -58,6 +59,17 @@ func (tu *TrackUpdate) AddAppearingArtists(a ...*Artist) *TrackUpdate {
 	return tu.AddAppearingArtistIDs(ids...)
 }
 
+// SetReleaseID sets the "release" edge to the Release entity by ID.
+func (tu *TrackUpdate) SetReleaseID(id pid.ID) *TrackUpdate {
+	tu.mutation.SetReleaseID(id)
+	return tu
+}
+
+// SetRelease sets the "release" edge to the Release entity.
+func (tu *TrackUpdate) SetRelease(r *Release) *TrackUpdate {
+	return tu.SetReleaseID(r.ID)
+}
+
 // Mutation returns the TrackMutation object of the builder.
 func (tu *TrackUpdate) Mutation() *TrackMutation {
 	return tu.mutation
@@ -82,6 +94,12 @@ func (tu *TrackUpdate) RemoveAppearingArtists(a ...*Artist) *TrackUpdate {
 		ids[i] = a[i].ID
 	}
 	return tu.RemoveAppearingArtistIDs(ids...)
+}
+
+// ClearRelease clears the "release" edge to the Release entity.
+func (tu *TrackUpdate) ClearRelease() *TrackUpdate {
+	tu.mutation.ClearRelease()
+	return tu
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -117,6 +135,9 @@ func (tu *TrackUpdate) check() error {
 		if err := track.TitleValidator(v); err != nil {
 			return &ValidationError{Name: "title", err: fmt.Errorf(`ent: validator failed for field "Track.title": %w`, err)}
 		}
+	}
+	if tu.mutation.ReleaseCleared() && len(tu.mutation.ReleaseIDs()) > 0 {
+		return errors.New(`ent: clearing a required unique edge "Track.release"`)
 	}
 	return nil
 }
@@ -193,6 +214,35 @@ func (tu *TrackUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		edge.Target.Fields = specE.Fields
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
+	if tu.mutation.ReleaseCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   track.ReleaseTable,
+			Columns: []string{track.ReleaseColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(release.FieldID, field.TypeInt64),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := tu.mutation.ReleaseIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   track.ReleaseTable,
+			Columns: []string{track.ReleaseColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(release.FieldID, field.TypeInt64),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
 	if n, err = sqlgraph.UpdateNodes(ctx, tu.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{track.Label}
@@ -242,6 +292,17 @@ func (tuo *TrackUpdateOne) AddAppearingArtists(a ...*Artist) *TrackUpdateOne {
 	return tuo.AddAppearingArtistIDs(ids...)
 }
 
+// SetReleaseID sets the "release" edge to the Release entity by ID.
+func (tuo *TrackUpdateOne) SetReleaseID(id pid.ID) *TrackUpdateOne {
+	tuo.mutation.SetReleaseID(id)
+	return tuo
+}
+
+// SetRelease sets the "release" edge to the Release entity.
+func (tuo *TrackUpdateOne) SetRelease(r *Release) *TrackUpdateOne {
+	return tuo.SetReleaseID(r.ID)
+}
+
 // Mutation returns the TrackMutation object of the builder.
 func (tuo *TrackUpdateOne) Mutation() *TrackMutation {
 	return tuo.mutation
@@ -266,6 +327,12 @@ func (tuo *TrackUpdateOne) RemoveAppearingArtists(a ...*Artist) *TrackUpdateOne 
 		ids[i] = a[i].ID
 	}
 	return tuo.RemoveAppearingArtistIDs(ids...)
+}
+
+// ClearRelease clears the "release" edge to the Release entity.
+func (tuo *TrackUpdateOne) ClearRelease() *TrackUpdateOne {
+	tuo.mutation.ClearRelease()
+	return tuo
 }
 
 // Where appends a list predicates to the TrackUpdate builder.
@@ -314,6 +381,9 @@ func (tuo *TrackUpdateOne) check() error {
 		if err := track.TitleValidator(v); err != nil {
 			return &ValidationError{Name: "title", err: fmt.Errorf(`ent: validator failed for field "Track.title": %w`, err)}
 		}
+	}
+	if tuo.mutation.ReleaseCleared() && len(tuo.mutation.ReleaseIDs()) > 0 {
+		return errors.New(`ent: clearing a required unique edge "Track.release"`)
 	}
 	return nil
 }
@@ -405,6 +475,35 @@ func (tuo *TrackUpdateOne) sqlSave(ctx context.Context) (_node *Track, err error
 		createE.defaults()
 		_, specE := createE.createSpec()
 		edge.Target.Fields = specE.Fields
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if tuo.mutation.ReleaseCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   track.ReleaseTable,
+			Columns: []string{track.ReleaseColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(release.FieldID, field.TypeInt64),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := tuo.mutation.ReleaseIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   track.ReleaseTable,
+			Columns: []string{track.ReleaseColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(release.FieldID, field.TypeInt64),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	_node = &Track{config: tuo.config}

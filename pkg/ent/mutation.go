@@ -20,7 +20,6 @@ import (
 	"github.com/Pineapple217/cvrs/pkg/ent/trackappearance"
 	"github.com/Pineapple217/cvrs/pkg/ent/user"
 	"github.com/Pineapple217/cvrs/pkg/pid"
-	"github.com/google/uuid"
 )
 
 const (
@@ -48,7 +47,8 @@ type ArtistMutation struct {
 	typ                       string
 	id                        *pid.ID
 	name                      *string
-	mbid                      *uuid.UUID
+	did                       *int64
+	adddid                    *int64
 	clearedFields             map[string]struct{}
 	appearing_tracks          map[pid.ID]struct{}
 	removedappearing_tracks   map[pid.ID]struct{}
@@ -201,53 +201,74 @@ func (m *ArtistMutation) ResetName() {
 	m.name = nil
 }
 
-// SetMbid sets the "mbid" field.
-func (m *ArtistMutation) SetMbid(u uuid.UUID) {
-	m.mbid = &u
+// SetDid sets the "did" field.
+func (m *ArtistMutation) SetDid(i int64) {
+	m.did = &i
+	m.adddid = nil
 }
 
-// Mbid returns the value of the "mbid" field in the mutation.
-func (m *ArtistMutation) Mbid() (r uuid.UUID, exists bool) {
-	v := m.mbid
+// Did returns the value of the "did" field in the mutation.
+func (m *ArtistMutation) Did() (r int64, exists bool) {
+	v := m.did
 	if v == nil {
 		return
 	}
 	return *v, true
 }
 
-// OldMbid returns the old "mbid" field's value of the Artist entity.
+// OldDid returns the old "did" field's value of the Artist entity.
 // If the Artist object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *ArtistMutation) OldMbid(ctx context.Context) (v *uuid.UUID, err error) {
+func (m *ArtistMutation) OldDid(ctx context.Context) (v *int64, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldMbid is only allowed on UpdateOne operations")
+		return v, errors.New("OldDid is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldMbid requires an ID field in the mutation")
+		return v, errors.New("OldDid requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
-		return v, fmt.Errorf("querying old value for OldMbid: %w", err)
+		return v, fmt.Errorf("querying old value for OldDid: %w", err)
 	}
-	return oldValue.Mbid, nil
+	return oldValue.Did, nil
 }
 
-// ClearMbid clears the value of the "mbid" field.
-func (m *ArtistMutation) ClearMbid() {
-	m.mbid = nil
-	m.clearedFields[artist.FieldMbid] = struct{}{}
+// AddDid adds i to the "did" field.
+func (m *ArtistMutation) AddDid(i int64) {
+	if m.adddid != nil {
+		*m.adddid += i
+	} else {
+		m.adddid = &i
+	}
 }
 
-// MbidCleared returns if the "mbid" field was cleared in this mutation.
-func (m *ArtistMutation) MbidCleared() bool {
-	_, ok := m.clearedFields[artist.FieldMbid]
+// AddedDid returns the value that was added to the "did" field in this mutation.
+func (m *ArtistMutation) AddedDid() (r int64, exists bool) {
+	v := m.adddid
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ClearDid clears the value of the "did" field.
+func (m *ArtistMutation) ClearDid() {
+	m.did = nil
+	m.adddid = nil
+	m.clearedFields[artist.FieldDid] = struct{}{}
+}
+
+// DidCleared returns if the "did" field was cleared in this mutation.
+func (m *ArtistMutation) DidCleared() bool {
+	_, ok := m.clearedFields[artist.FieldDid]
 	return ok
 }
 
-// ResetMbid resets all changes to the "mbid" field.
-func (m *ArtistMutation) ResetMbid() {
-	m.mbid = nil
-	delete(m.clearedFields, artist.FieldMbid)
+// ResetDid resets all changes to the "did" field.
+func (m *ArtistMutation) ResetDid() {
+	m.did = nil
+	m.adddid = nil
+	delete(m.clearedFields, artist.FieldDid)
 }
 
 // AddAppearingTrackIDs adds the "appearing_tracks" edge to the Track entity by ids.
@@ -396,8 +417,8 @@ func (m *ArtistMutation) Fields() []string {
 	if m.name != nil {
 		fields = append(fields, artist.FieldName)
 	}
-	if m.mbid != nil {
-		fields = append(fields, artist.FieldMbid)
+	if m.did != nil {
+		fields = append(fields, artist.FieldDid)
 	}
 	return fields
 }
@@ -409,8 +430,8 @@ func (m *ArtistMutation) Field(name string) (ent.Value, bool) {
 	switch name {
 	case artist.FieldName:
 		return m.Name()
-	case artist.FieldMbid:
-		return m.Mbid()
+	case artist.FieldDid:
+		return m.Did()
 	}
 	return nil, false
 }
@@ -422,8 +443,8 @@ func (m *ArtistMutation) OldField(ctx context.Context, name string) (ent.Value, 
 	switch name {
 	case artist.FieldName:
 		return m.OldName(ctx)
-	case artist.FieldMbid:
-		return m.OldMbid(ctx)
+	case artist.FieldDid:
+		return m.OldDid(ctx)
 	}
 	return nil, fmt.Errorf("unknown Artist field %s", name)
 }
@@ -440,12 +461,12 @@ func (m *ArtistMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetName(v)
 		return nil
-	case artist.FieldMbid:
-		v, ok := value.(uuid.UUID)
+	case artist.FieldDid:
+		v, ok := value.(int64)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
-		m.SetMbid(v)
+		m.SetDid(v)
 		return nil
 	}
 	return fmt.Errorf("unknown Artist field %s", name)
@@ -454,13 +475,21 @@ func (m *ArtistMutation) SetField(name string, value ent.Value) error {
 // AddedFields returns all numeric fields that were incremented/decremented during
 // this mutation.
 func (m *ArtistMutation) AddedFields() []string {
-	return nil
+	var fields []string
+	if m.adddid != nil {
+		fields = append(fields, artist.FieldDid)
+	}
+	return fields
 }
 
 // AddedField returns the numeric value that was incremented/decremented on a field
 // with the given name. The second boolean return value indicates that this field
 // was not set, or was not defined in the schema.
 func (m *ArtistMutation) AddedField(name string) (ent.Value, bool) {
+	switch name {
+	case artist.FieldDid:
+		return m.AddedDid()
+	}
 	return nil, false
 }
 
@@ -469,6 +498,13 @@ func (m *ArtistMutation) AddedField(name string) (ent.Value, bool) {
 // type.
 func (m *ArtistMutation) AddField(name string, value ent.Value) error {
 	switch name {
+	case artist.FieldDid:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddDid(v)
+		return nil
 	}
 	return fmt.Errorf("unknown Artist numeric field %s", name)
 }
@@ -477,8 +513,8 @@ func (m *ArtistMutation) AddField(name string, value ent.Value) error {
 // mutation.
 func (m *ArtistMutation) ClearedFields() []string {
 	var fields []string
-	if m.FieldCleared(artist.FieldMbid) {
-		fields = append(fields, artist.FieldMbid)
+	if m.FieldCleared(artist.FieldDid) {
+		fields = append(fields, artist.FieldDid)
 	}
 	return fields
 }
@@ -494,8 +530,8 @@ func (m *ArtistMutation) FieldCleared(name string) bool {
 // error if the field is not defined in the schema.
 func (m *ArtistMutation) ClearField(name string) error {
 	switch name {
-	case artist.FieldMbid:
-		m.ClearMbid()
+	case artist.FieldDid:
+		m.ClearDid()
 		return nil
 	}
 	return fmt.Errorf("unknown Artist nullable field %s", name)
@@ -508,8 +544,8 @@ func (m *ArtistMutation) ResetField(name string) error {
 	case artist.FieldName:
 		m.ResetName()
 		return nil
-	case artist.FieldMbid:
-		m.ResetMbid()
+	case artist.FieldDid:
+		m.ResetDid()
 		return nil
 	}
 	return fmt.Errorf("unknown Artist field %s", name)
@@ -1562,9 +1598,13 @@ type ReleaseMutation struct {
 	id                       *pid.ID
 	name                     *string
 	_type                    *release.Type
+	release_date             *time.Time
 	clearedFields            map[string]struct{}
 	image                    *pid.ID
 	clearedimage             bool
+	tracks                   map[pid.ID]struct{}
+	removedtracks            map[pid.ID]struct{}
+	clearedtracks            bool
 	appearing_artists        map[pid.ID]struct{}
 	removedappearing_artists map[pid.ID]struct{}
 	clearedappearing_artists bool
@@ -1749,6 +1789,42 @@ func (m *ReleaseMutation) ResetType() {
 	m._type = nil
 }
 
+// SetReleaseDate sets the "release_date" field.
+func (m *ReleaseMutation) SetReleaseDate(t time.Time) {
+	m.release_date = &t
+}
+
+// ReleaseDate returns the value of the "release_date" field in the mutation.
+func (m *ReleaseMutation) ReleaseDate() (r time.Time, exists bool) {
+	v := m.release_date
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldReleaseDate returns the old "release_date" field's value of the Release entity.
+// If the Release object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ReleaseMutation) OldReleaseDate(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldReleaseDate is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldReleaseDate requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldReleaseDate: %w", err)
+	}
+	return oldValue.ReleaseDate, nil
+}
+
+// ResetReleaseDate resets all changes to the "release_date" field.
+func (m *ReleaseMutation) ResetReleaseDate() {
+	m.release_date = nil
+}
+
 // SetImageID sets the "image" edge to the Image entity by id.
 func (m *ReleaseMutation) SetImageID(id pid.ID) {
 	m.image = &id
@@ -1786,6 +1862,60 @@ func (m *ReleaseMutation) ImageIDs() (ids []pid.ID) {
 func (m *ReleaseMutation) ResetImage() {
 	m.image = nil
 	m.clearedimage = false
+}
+
+// AddTrackIDs adds the "tracks" edge to the Track entity by ids.
+func (m *ReleaseMutation) AddTrackIDs(ids ...pid.ID) {
+	if m.tracks == nil {
+		m.tracks = make(map[pid.ID]struct{})
+	}
+	for i := range ids {
+		m.tracks[ids[i]] = struct{}{}
+	}
+}
+
+// ClearTracks clears the "tracks" edge to the Track entity.
+func (m *ReleaseMutation) ClearTracks() {
+	m.clearedtracks = true
+}
+
+// TracksCleared reports if the "tracks" edge to the Track entity was cleared.
+func (m *ReleaseMutation) TracksCleared() bool {
+	return m.clearedtracks
+}
+
+// RemoveTrackIDs removes the "tracks" edge to the Track entity by IDs.
+func (m *ReleaseMutation) RemoveTrackIDs(ids ...pid.ID) {
+	if m.removedtracks == nil {
+		m.removedtracks = make(map[pid.ID]struct{})
+	}
+	for i := range ids {
+		delete(m.tracks, ids[i])
+		m.removedtracks[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedTracks returns the removed IDs of the "tracks" edge to the Track entity.
+func (m *ReleaseMutation) RemovedTracksIDs() (ids []pid.ID) {
+	for id := range m.removedtracks {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// TracksIDs returns the "tracks" edge IDs in the mutation.
+func (m *ReleaseMutation) TracksIDs() (ids []pid.ID) {
+	for id := range m.tracks {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetTracks resets all changes to the "tracks" edge.
+func (m *ReleaseMutation) ResetTracks() {
+	m.tracks = nil
+	m.clearedtracks = false
+	m.removedtracks = nil
 }
 
 // AddAppearingArtistIDs adds the "appearing_artists" edge to the Artist entity by ids.
@@ -1876,12 +2006,15 @@ func (m *ReleaseMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *ReleaseMutation) Fields() []string {
-	fields := make([]string, 0, 2)
+	fields := make([]string, 0, 3)
 	if m.name != nil {
 		fields = append(fields, release.FieldName)
 	}
 	if m._type != nil {
 		fields = append(fields, release.FieldType)
+	}
+	if m.release_date != nil {
+		fields = append(fields, release.FieldReleaseDate)
 	}
 	return fields
 }
@@ -1895,6 +2028,8 @@ func (m *ReleaseMutation) Field(name string) (ent.Value, bool) {
 		return m.Name()
 	case release.FieldType:
 		return m.GetType()
+	case release.FieldReleaseDate:
+		return m.ReleaseDate()
 	}
 	return nil, false
 }
@@ -1908,6 +2043,8 @@ func (m *ReleaseMutation) OldField(ctx context.Context, name string) (ent.Value,
 		return m.OldName(ctx)
 	case release.FieldType:
 		return m.OldType(ctx)
+	case release.FieldReleaseDate:
+		return m.OldReleaseDate(ctx)
 	}
 	return nil, fmt.Errorf("unknown Release field %s", name)
 }
@@ -1930,6 +2067,13 @@ func (m *ReleaseMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetType(v)
+		return nil
+	case release.FieldReleaseDate:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetReleaseDate(v)
 		return nil
 	}
 	return fmt.Errorf("unknown Release field %s", name)
@@ -1986,15 +2130,21 @@ func (m *ReleaseMutation) ResetField(name string) error {
 	case release.FieldType:
 		m.ResetType()
 		return nil
+	case release.FieldReleaseDate:
+		m.ResetReleaseDate()
+		return nil
 	}
 	return fmt.Errorf("unknown Release field %s", name)
 }
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *ReleaseMutation) AddedEdges() []string {
-	edges := make([]string, 0, 2)
+	edges := make([]string, 0, 3)
 	if m.image != nil {
 		edges = append(edges, release.EdgeImage)
+	}
+	if m.tracks != nil {
+		edges = append(edges, release.EdgeTracks)
 	}
 	if m.appearing_artists != nil {
 		edges = append(edges, release.EdgeAppearingArtists)
@@ -2010,6 +2160,12 @@ func (m *ReleaseMutation) AddedIDs(name string) []ent.Value {
 		if id := m.image; id != nil {
 			return []ent.Value{*id}
 		}
+	case release.EdgeTracks:
+		ids := make([]ent.Value, 0, len(m.tracks))
+		for id := range m.tracks {
+			ids = append(ids, id)
+		}
+		return ids
 	case release.EdgeAppearingArtists:
 		ids := make([]ent.Value, 0, len(m.appearing_artists))
 		for id := range m.appearing_artists {
@@ -2022,7 +2178,10 @@ func (m *ReleaseMutation) AddedIDs(name string) []ent.Value {
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *ReleaseMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 2)
+	edges := make([]string, 0, 3)
+	if m.removedtracks != nil {
+		edges = append(edges, release.EdgeTracks)
+	}
 	if m.removedappearing_artists != nil {
 		edges = append(edges, release.EdgeAppearingArtists)
 	}
@@ -2033,6 +2192,12 @@ func (m *ReleaseMutation) RemovedEdges() []string {
 // the given name in this mutation.
 func (m *ReleaseMutation) RemovedIDs(name string) []ent.Value {
 	switch name {
+	case release.EdgeTracks:
+		ids := make([]ent.Value, 0, len(m.removedtracks))
+		for id := range m.removedtracks {
+			ids = append(ids, id)
+		}
+		return ids
 	case release.EdgeAppearingArtists:
 		ids := make([]ent.Value, 0, len(m.removedappearing_artists))
 		for id := range m.removedappearing_artists {
@@ -2045,9 +2210,12 @@ func (m *ReleaseMutation) RemovedIDs(name string) []ent.Value {
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *ReleaseMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 2)
+	edges := make([]string, 0, 3)
 	if m.clearedimage {
 		edges = append(edges, release.EdgeImage)
+	}
+	if m.clearedtracks {
+		edges = append(edges, release.EdgeTracks)
 	}
 	if m.clearedappearing_artists {
 		edges = append(edges, release.EdgeAppearingArtists)
@@ -2061,6 +2229,8 @@ func (m *ReleaseMutation) EdgeCleared(name string) bool {
 	switch name {
 	case release.EdgeImage:
 		return m.clearedimage
+	case release.EdgeTracks:
+		return m.clearedtracks
 	case release.EdgeAppearingArtists:
 		return m.clearedappearing_artists
 	}
@@ -2084,6 +2254,9 @@ func (m *ReleaseMutation) ResetEdge(name string) error {
 	switch name {
 	case release.EdgeImage:
 		m.ResetImage()
+		return nil
+	case release.EdgeTracks:
+		m.ResetTracks()
 		return nil
 	case release.EdgeAppearingArtists:
 		m.ResetAppearingArtists()
@@ -2553,6 +2726,8 @@ type TrackMutation struct {
 	appearing_artists        map[pid.ID]struct{}
 	removedappearing_artists map[pid.ID]struct{}
 	clearedappearing_artists bool
+	release                  *pid.ID
+	clearedrelease           bool
 	done                     bool
 	oldValue                 func(context.Context) (*Track, error)
 	predicates               []predicate.Track
@@ -2752,6 +2927,45 @@ func (m *TrackMutation) ResetAppearingArtists() {
 	m.removedappearing_artists = nil
 }
 
+// SetReleaseID sets the "release" edge to the Release entity by id.
+func (m *TrackMutation) SetReleaseID(id pid.ID) {
+	m.release = &id
+}
+
+// ClearRelease clears the "release" edge to the Release entity.
+func (m *TrackMutation) ClearRelease() {
+	m.clearedrelease = true
+}
+
+// ReleaseCleared reports if the "release" edge to the Release entity was cleared.
+func (m *TrackMutation) ReleaseCleared() bool {
+	return m.clearedrelease
+}
+
+// ReleaseID returns the "release" edge ID in the mutation.
+func (m *TrackMutation) ReleaseID() (id pid.ID, exists bool) {
+	if m.release != nil {
+		return *m.release, true
+	}
+	return
+}
+
+// ReleaseIDs returns the "release" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// ReleaseID instead. It exists only for internal usage by the builders.
+func (m *TrackMutation) ReleaseIDs() (ids []pid.ID) {
+	if id := m.release; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetRelease resets all changes to the "release" edge.
+func (m *TrackMutation) ResetRelease() {
+	m.release = nil
+	m.clearedrelease = false
+}
+
 // Where appends a list predicates to the TrackMutation builder.
 func (m *TrackMutation) Where(ps ...predicate.Track) {
 	m.predicates = append(m.predicates, ps...)
@@ -2885,9 +3099,12 @@ func (m *TrackMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *TrackMutation) AddedEdges() []string {
-	edges := make([]string, 0, 1)
+	edges := make([]string, 0, 2)
 	if m.appearing_artists != nil {
 		edges = append(edges, track.EdgeAppearingArtists)
+	}
+	if m.release != nil {
+		edges = append(edges, track.EdgeRelease)
 	}
 	return edges
 }
@@ -2902,13 +3119,17 @@ func (m *TrackMutation) AddedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case track.EdgeRelease:
+		if id := m.release; id != nil {
+			return []ent.Value{*id}
+		}
 	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *TrackMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 1)
+	edges := make([]string, 0, 2)
 	if m.removedappearing_artists != nil {
 		edges = append(edges, track.EdgeAppearingArtists)
 	}
@@ -2931,9 +3152,12 @@ func (m *TrackMutation) RemovedIDs(name string) []ent.Value {
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *TrackMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 1)
+	edges := make([]string, 0, 2)
 	if m.clearedappearing_artists {
 		edges = append(edges, track.EdgeAppearingArtists)
+	}
+	if m.clearedrelease {
+		edges = append(edges, track.EdgeRelease)
 	}
 	return edges
 }
@@ -2944,6 +3168,8 @@ func (m *TrackMutation) EdgeCleared(name string) bool {
 	switch name {
 	case track.EdgeAppearingArtists:
 		return m.clearedappearing_artists
+	case track.EdgeRelease:
+		return m.clearedrelease
 	}
 	return false
 }
@@ -2952,6 +3178,9 @@ func (m *TrackMutation) EdgeCleared(name string) bool {
 // if that edge is not defined in the schema.
 func (m *TrackMutation) ClearEdge(name string) error {
 	switch name {
+	case track.EdgeRelease:
+		m.ClearRelease()
+		return nil
 	}
 	return fmt.Errorf("unknown Track unique edge %s", name)
 }
@@ -2962,6 +3191,9 @@ func (m *TrackMutation) ResetEdge(name string) error {
 	switch name {
 	case track.EdgeAppearingArtists:
 		m.ResetAppearingArtists()
+		return nil
+	case track.EdgeRelease:
+		m.ResetRelease()
 		return nil
 	}
 	return fmt.Errorf("unknown Track edge %s", name)

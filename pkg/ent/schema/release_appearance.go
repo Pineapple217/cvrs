@@ -29,7 +29,7 @@ func (ReleaseAppearance) Fields() []ent.Field {
 			GoType(pid.New()).
 			DefaultFunc(pid.New),
 		field.Int("order").
-			Positive(),
+			NonNegative(),
 	}
 }
 

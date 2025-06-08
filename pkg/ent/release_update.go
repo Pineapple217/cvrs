@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
@@ -14,6 +15,7 @@ import (
 	"github.com/Pineapple217/cvrs/pkg/ent/image"
 	"github.com/Pineapple217/cvrs/pkg/ent/predicate"
 	"github.com/Pineapple217/cvrs/pkg/ent/release"
+	"github.com/Pineapple217/cvrs/pkg/ent/track"
 	"github.com/Pineapple217/cvrs/pkg/pid"
 )
 
@@ -58,6 +60,20 @@ func (ru *ReleaseUpdate) SetNillableType(r *release.Type) *ReleaseUpdate {
 	return ru
 }
 
+// SetReleaseDate sets the "release_date" field.
+func (ru *ReleaseUpdate) SetReleaseDate(t time.Time) *ReleaseUpdate {
+	ru.mutation.SetReleaseDate(t)
+	return ru
+}
+
+// SetNillableReleaseDate sets the "release_date" field if the given value is not nil.
+func (ru *ReleaseUpdate) SetNillableReleaseDate(t *time.Time) *ReleaseUpdate {
+	if t != nil {
+		ru.SetReleaseDate(*t)
+	}
+	return ru
+}
+
 // SetImageID sets the "image" edge to the Image entity by ID.
 func (ru *ReleaseUpdate) SetImageID(id pid.ID) *ReleaseUpdate {
 	ru.mutation.SetImageID(id)
@@ -75,6 +91,21 @@ func (ru *ReleaseUpdate) SetNillableImageID(id *pid.ID) *ReleaseUpdate {
 // SetImage sets the "image" edge to the Image entity.
 func (ru *ReleaseUpdate) SetImage(i *Image) *ReleaseUpdate {
 	return ru.SetImageID(i.ID)
+}
+
+// AddTrackIDs adds the "tracks" edge to the Track entity by IDs.
+func (ru *ReleaseUpdate) AddTrackIDs(ids ...pid.ID) *ReleaseUpdate {
+	ru.mutation.AddTrackIDs(ids...)
+	return ru
+}
+
+// AddTracks adds the "tracks" edges to the Track entity.
+func (ru *ReleaseUpdate) AddTracks(t ...*Track) *ReleaseUpdate {
+	ids := make([]pid.ID, len(t))
+	for i := range t {
+		ids[i] = t[i].ID
+	}
+	return ru.AddTrackIDs(ids...)
 }
 
 // AddAppearingArtistIDs adds the "appearing_artists" edge to the Artist entity by IDs.
@@ -101,6 +132,27 @@ func (ru *ReleaseUpdate) Mutation() *ReleaseMutation {
 func (ru *ReleaseUpdate) ClearImage() *ReleaseUpdate {
 	ru.mutation.ClearImage()
 	return ru
+}
+
+// ClearTracks clears all "tracks" edges to the Track entity.
+func (ru *ReleaseUpdate) ClearTracks() *ReleaseUpdate {
+	ru.mutation.ClearTracks()
+	return ru
+}
+
+// RemoveTrackIDs removes the "tracks" edge to Track entities by IDs.
+func (ru *ReleaseUpdate) RemoveTrackIDs(ids ...pid.ID) *ReleaseUpdate {
+	ru.mutation.RemoveTrackIDs(ids...)
+	return ru
+}
+
+// RemoveTracks removes "tracks" edges to Track entities.
+func (ru *ReleaseUpdate) RemoveTracks(t ...*Track) *ReleaseUpdate {
+	ids := make([]pid.ID, len(t))
+	for i := range t {
+		ids[i] = t[i].ID
+	}
+	return ru.RemoveTrackIDs(ids...)
 }
 
 // ClearAppearingArtists clears all "appearing_artists" edges to the Artist entity.
@@ -184,6 +236,9 @@ func (ru *ReleaseUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	if value, ok := ru.mutation.GetType(); ok {
 		_spec.SetField(release.FieldType, field.TypeEnum, value)
 	}
+	if value, ok := ru.mutation.ReleaseDate(); ok {
+		_spec.SetField(release.FieldReleaseDate, field.TypeTime, value)
+	}
 	if ru.mutation.ImageCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
@@ -206,6 +261,51 @@ func (ru *ReleaseUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(image.FieldID, field.TypeInt64),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if ru.mutation.TracksCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   release.TracksTable,
+			Columns: []string{release.TracksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(track.FieldID, field.TypeInt64),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := ru.mutation.RemovedTracksIDs(); len(nodes) > 0 && !ru.mutation.TracksCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   release.TracksTable,
+			Columns: []string{release.TracksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(track.FieldID, field.TypeInt64),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := ru.mutation.TracksIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   release.TracksTable,
+			Columns: []string{release.TracksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(track.FieldID, field.TypeInt64),
 			},
 		}
 		for _, k := range nodes {
@@ -318,6 +418,20 @@ func (ruo *ReleaseUpdateOne) SetNillableType(r *release.Type) *ReleaseUpdateOne 
 	return ruo
 }
 
+// SetReleaseDate sets the "release_date" field.
+func (ruo *ReleaseUpdateOne) SetReleaseDate(t time.Time) *ReleaseUpdateOne {
+	ruo.mutation.SetReleaseDate(t)
+	return ruo
+}
+
+// SetNillableReleaseDate sets the "release_date" field if the given value is not nil.
+func (ruo *ReleaseUpdateOne) SetNillableReleaseDate(t *time.Time) *ReleaseUpdateOne {
+	if t != nil {
+		ruo.SetReleaseDate(*t)
+	}
+	return ruo
+}
+
 // SetImageID sets the "image" edge to the Image entity by ID.
 func (ruo *ReleaseUpdateOne) SetImageID(id pid.ID) *ReleaseUpdateOne {
 	ruo.mutation.SetImageID(id)
@@ -335,6 +449,21 @@ func (ruo *ReleaseUpdateOne) SetNillableImageID(id *pid.ID) *ReleaseUpdateOne {
 // SetImage sets the "image" edge to the Image entity.
 func (ruo *ReleaseUpdateOne) SetImage(i *Image) *ReleaseUpdateOne {
 	return ruo.SetImageID(i.ID)
+}
+
+// AddTrackIDs adds the "tracks" edge to the Track entity by IDs.
+func (ruo *ReleaseUpdateOne) AddTrackIDs(ids ...pid.ID) *ReleaseUpdateOne {
+	ruo.mutation.AddTrackIDs(ids...)
+	return ruo
+}
+
+// AddTracks adds the "tracks" edges to the Track entity.
+func (ruo *ReleaseUpdateOne) AddTracks(t ...*Track) *ReleaseUpdateOne {
+	ids := make([]pid.ID, len(t))
+	for i := range t {
+		ids[i] = t[i].ID
+	}
+	return ruo.AddTrackIDs(ids...)
 }
 
 // AddAppearingArtistIDs adds the "appearing_artists" edge to the Artist entity by IDs.
@@ -361,6 +490,27 @@ func (ruo *ReleaseUpdateOne) Mutation() *ReleaseMutation {
 func (ruo *ReleaseUpdateOne) ClearImage() *ReleaseUpdateOne {
 	ruo.mutation.ClearImage()
 	return ruo
+}
+
+// ClearTracks clears all "tracks" edges to the Track entity.
+func (ruo *ReleaseUpdateOne) ClearTracks() *ReleaseUpdateOne {
+	ruo.mutation.ClearTracks()
+	return ruo
+}
+
+// RemoveTrackIDs removes the "tracks" edge to Track entities by IDs.
+func (ruo *ReleaseUpdateOne) RemoveTrackIDs(ids ...pid.ID) *ReleaseUpdateOne {
+	ruo.mutation.RemoveTrackIDs(ids...)
+	return ruo
+}
+
+// RemoveTracks removes "tracks" edges to Track entities.
+func (ruo *ReleaseUpdateOne) RemoveTracks(t ...*Track) *ReleaseUpdateOne {
+	ids := make([]pid.ID, len(t))
+	for i := range t {
+		ids[i] = t[i].ID
+	}
+	return ruo.RemoveTrackIDs(ids...)
 }
 
 // ClearAppearingArtists clears all "appearing_artists" edges to the Artist entity.
@@ -474,6 +624,9 @@ func (ruo *ReleaseUpdateOne) sqlSave(ctx context.Context) (_node *Release, err e
 	if value, ok := ruo.mutation.GetType(); ok {
 		_spec.SetField(release.FieldType, field.TypeEnum, value)
 	}
+	if value, ok := ruo.mutation.ReleaseDate(); ok {
+		_spec.SetField(release.FieldReleaseDate, field.TypeTime, value)
+	}
 	if ruo.mutation.ImageCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
@@ -496,6 +649,51 @@ func (ruo *ReleaseUpdateOne) sqlSave(ctx context.Context) (_node *Release, err e
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(image.FieldID, field.TypeInt64),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if ruo.mutation.TracksCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   release.TracksTable,
+			Columns: []string{release.TracksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(track.FieldID, field.TypeInt64),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := ruo.mutation.RemovedTracksIDs(); len(nodes) > 0 && !ruo.mutation.TracksCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   release.TracksTable,
+			Columns: []string{release.TracksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(track.FieldID, field.TypeInt64),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := ruo.mutation.TracksIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   release.TracksTable,
+			Columns: []string{release.TracksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(track.FieldID, field.TypeInt64),
 			},
 		}
 		for _, k := range nodes {

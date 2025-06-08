@@ -8,6 +8,7 @@ import (
 
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
+	"github.com/Pineapple217/cvrs/pkg/ent/release"
 	"github.com/Pineapple217/cvrs/pkg/ent/track"
 	"github.com/Pineapple217/cvrs/pkg/pid"
 )
@@ -21,19 +22,22 @@ type Track struct {
 	Title string `json:"title,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the TrackQuery when eager-loading is set.
-	Edges        TrackEdges `json:"edges"`
-	selectValues sql.SelectValues
+	Edges          TrackEdges `json:"edges"`
+	release_tracks *pid.ID
+	selectValues   sql.SelectValues
 }
 
 // TrackEdges holds the relations/edges for other nodes in the graph.
 type TrackEdges struct {
 	// AppearingArtists holds the value of the appearing_artists edge.
 	AppearingArtists []*Artist `json:"appearing_artists,omitempty"`
+	// Release holds the value of the release edge.
+	Release *Release `json:"release,omitempty"`
 	// Appearance holds the value of the appearance edge.
 	Appearance []*TrackAppearance `json:"appearance,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [2]bool
+	loadedTypes [3]bool
 }
 
 // AppearingArtistsOrErr returns the AppearingArtists value or an error if the edge
@@ -45,10 +49,21 @@ func (e TrackEdges) AppearingArtistsOrErr() ([]*Artist, error) {
 	return nil, &NotLoadedError{edge: "appearing_artists"}
 }
 
+// ReleaseOrErr returns the Release value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e TrackEdges) ReleaseOrErr() (*Release, error) {
+	if e.Release != nil {
+		return e.Release, nil
+	} else if e.loadedTypes[1] {
+		return nil, &NotFoundError{label: release.Label}
+	}
+	return nil, &NotLoadedError{edge: "release"}
+}
+
 // AppearanceOrErr returns the Appearance value or an error if the edge
 // was not loaded in eager-loading.
 func (e TrackEdges) AppearanceOrErr() ([]*TrackAppearance, error) {
-	if e.loadedTypes[1] {
+	if e.loadedTypes[2] {
 		return e.Appearance, nil
 	}
 	return nil, &NotLoadedError{edge: "appearance"}
@@ -63,6 +78,8 @@ func (*Track) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullInt64)
 		case track.FieldTitle:
 			values[i] = new(sql.NullString)
+		case track.ForeignKeys[0]: // release_tracks
+			values[i] = new(sql.NullInt64)
 		default:
 			values[i] = new(sql.UnknownType)
 		}
@@ -90,6 +107,13 @@ func (t *Track) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				t.Title = value.String
 			}
+		case track.ForeignKeys[0]:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field release_tracks", values[i])
+			} else if value.Valid {
+				t.release_tracks = new(pid.ID)
+				*t.release_tracks = pid.ID(value.Int64)
+			}
 		default:
 			t.selectValues.Set(columns[i], values[i])
 		}
@@ -106,6 +130,11 @@ func (t *Track) Value(name string) (ent.Value, error) {
 // QueryAppearingArtists queries the "appearing_artists" edge of the Track entity.
 func (t *Track) QueryAppearingArtists() *ArtistQuery {
 	return NewTrackClient(t.config).QueryAppearingArtists(t)
+}
+
+// QueryRelease queries the "release" edge of the Track entity.
+func (t *Track) QueryRelease() *ReleaseQuery {
+	return NewTrackClient(t.config).QueryRelease(t)
 }
 
 // QueryAppearance queries the "appearance" edge of the Track entity.

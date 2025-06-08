@@ -17,6 +17,8 @@ const (
 	FieldTitle = "title"
 	// EdgeAppearingArtists holds the string denoting the appearing_artists edge name in mutations.
 	EdgeAppearingArtists = "appearing_artists"
+	// EdgeRelease holds the string denoting the release edge name in mutations.
+	EdgeRelease = "release"
 	// EdgeAppearance holds the string denoting the appearance edge name in mutations.
 	EdgeAppearance = "appearance"
 	// Table holds the table name of the track in the database.
@@ -26,6 +28,13 @@ const (
 	// AppearingArtistsInverseTable is the table name for the Artist entity.
 	// It exists in this package in order to avoid circular dependency with the "artist" package.
 	AppearingArtistsInverseTable = "artists"
+	// ReleaseTable is the table that holds the release relation/edge.
+	ReleaseTable = "tracks"
+	// ReleaseInverseTable is the table name for the Release entity.
+	// It exists in this package in order to avoid circular dependency with the "release" package.
+	ReleaseInverseTable = "releases"
+	// ReleaseColumn is the table column denoting the release relation/edge.
+	ReleaseColumn = "release_tracks"
 	// AppearanceTable is the table that holds the appearance relation/edge.
 	AppearanceTable = "track_appearances"
 	// AppearanceInverseTable is the table name for the TrackAppearance entity.
@@ -41,6 +50,12 @@ var Columns = []string{
 	FieldTitle,
 }
 
+// ForeignKeys holds the SQL foreign-keys that are owned by the "tracks"
+// table and are not defined as standalone fields in the schema.
+var ForeignKeys = []string{
+	"release_tracks",
+}
+
 var (
 	// AppearingArtistsPrimaryKey and AppearingArtistsColumn2 are the table columns denoting the
 	// primary key for the appearing_artists relation (M2M).
@@ -51,6 +66,11 @@ var (
 func ValidColumn(column string) bool {
 	for i := range Columns {
 		if column == Columns[i] {
+			return true
+		}
+	}
+	for i := range ForeignKeys {
+		if column == ForeignKeys[i] {
 			return true
 		}
 	}
@@ -91,6 +111,13 @@ func ByAppearingArtists(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption 
 	}
 }
 
+// ByReleaseField orders the results by release field.
+func ByReleaseField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newReleaseStep(), sql.OrderByField(field, opts...))
+	}
+}
+
 // ByAppearanceCount orders the results by appearance count.
 func ByAppearanceCount(opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
@@ -109,6 +136,13 @@ func newAppearingArtistsStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(AppearingArtistsInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.M2M, true, AppearingArtistsTable, AppearingArtistsPrimaryKey...),
+	)
+}
+func newReleaseStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(ReleaseInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, true, ReleaseTable, ReleaseColumn),
 	)
 }
 func newAppearanceStep() *sqlgraph.Step {

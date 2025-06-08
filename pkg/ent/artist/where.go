@@ -7,7 +7,6 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/Pineapple217/cvrs/pkg/ent/predicate"
 	"github.com/Pineapple217/cvrs/pkg/pid"
-	"github.com/google/uuid"
 )
 
 // ID filters vertices based on their ID field.
@@ -60,9 +59,9 @@ func Name(v string) predicate.Artist {
 	return predicate.Artist(sql.FieldEQ(FieldName, v))
 }
 
-// Mbid applies equality check predicate on the "mbid" field. It's identical to MbidEQ.
-func Mbid(v uuid.UUID) predicate.Artist {
-	return predicate.Artist(sql.FieldEQ(FieldMbid, v))
+// Did applies equality check predicate on the "did" field. It's identical to DidEQ.
+func Did(v int64) predicate.Artist {
+	return predicate.Artist(sql.FieldEQ(FieldDid, v))
 }
 
 // NameEQ applies the EQ predicate on the "name" field.
@@ -130,54 +129,54 @@ func NameContainsFold(v string) predicate.Artist {
 	return predicate.Artist(sql.FieldContainsFold(FieldName, v))
 }
 
-// MbidEQ applies the EQ predicate on the "mbid" field.
-func MbidEQ(v uuid.UUID) predicate.Artist {
-	return predicate.Artist(sql.FieldEQ(FieldMbid, v))
+// DidEQ applies the EQ predicate on the "did" field.
+func DidEQ(v int64) predicate.Artist {
+	return predicate.Artist(sql.FieldEQ(FieldDid, v))
 }
 
-// MbidNEQ applies the NEQ predicate on the "mbid" field.
-func MbidNEQ(v uuid.UUID) predicate.Artist {
-	return predicate.Artist(sql.FieldNEQ(FieldMbid, v))
+// DidNEQ applies the NEQ predicate on the "did" field.
+func DidNEQ(v int64) predicate.Artist {
+	return predicate.Artist(sql.FieldNEQ(FieldDid, v))
 }
 
-// MbidIn applies the In predicate on the "mbid" field.
-func MbidIn(vs ...uuid.UUID) predicate.Artist {
-	return predicate.Artist(sql.FieldIn(FieldMbid, vs...))
+// DidIn applies the In predicate on the "did" field.
+func DidIn(vs ...int64) predicate.Artist {
+	return predicate.Artist(sql.FieldIn(FieldDid, vs...))
 }
 
-// MbidNotIn applies the NotIn predicate on the "mbid" field.
-func MbidNotIn(vs ...uuid.UUID) predicate.Artist {
-	return predicate.Artist(sql.FieldNotIn(FieldMbid, vs...))
+// DidNotIn applies the NotIn predicate on the "did" field.
+func DidNotIn(vs ...int64) predicate.Artist {
+	return predicate.Artist(sql.FieldNotIn(FieldDid, vs...))
 }
 
-// MbidGT applies the GT predicate on the "mbid" field.
-func MbidGT(v uuid.UUID) predicate.Artist {
-	return predicate.Artist(sql.FieldGT(FieldMbid, v))
+// DidGT applies the GT predicate on the "did" field.
+func DidGT(v int64) predicate.Artist {
+	return predicate.Artist(sql.FieldGT(FieldDid, v))
 }
 
-// MbidGTE applies the GTE predicate on the "mbid" field.
-func MbidGTE(v uuid.UUID) predicate.Artist {
-	return predicate.Artist(sql.FieldGTE(FieldMbid, v))
+// DidGTE applies the GTE predicate on the "did" field.
+func DidGTE(v int64) predicate.Artist {
+	return predicate.Artist(sql.FieldGTE(FieldDid, v))
 }
 
-// MbidLT applies the LT predicate on the "mbid" field.
-func MbidLT(v uuid.UUID) predicate.Artist {
-	return predicate.Artist(sql.FieldLT(FieldMbid, v))
+// DidLT applies the LT predicate on the "did" field.
+func DidLT(v int64) predicate.Artist {
+	return predicate.Artist(sql.FieldLT(FieldDid, v))
 }
 
-// MbidLTE applies the LTE predicate on the "mbid" field.
-func MbidLTE(v uuid.UUID) predicate.Artist {
-	return predicate.Artist(sql.FieldLTE(FieldMbid, v))
+// DidLTE applies the LTE predicate on the "did" field.
+func DidLTE(v int64) predicate.Artist {
+	return predicate.Artist(sql.FieldLTE(FieldDid, v))
 }
 
-// MbidIsNil applies the IsNil predicate on the "mbid" field.
-func MbidIsNil() predicate.Artist {
-	return predicate.Artist(sql.FieldIsNull(FieldMbid))
+// DidIsNil applies the IsNil predicate on the "did" field.
+func DidIsNil() predicate.Artist {
+	return predicate.Artist(sql.FieldIsNull(FieldDid))
 }
 
-// MbidNotNil applies the NotNil predicate on the "mbid" field.
-func MbidNotNil() predicate.Artist {
-	return predicate.Artist(sql.FieldNotNull(FieldMbid))
+// DidNotNil applies the NotNil predicate on the "did" field.
+func DidNotNil() predicate.Artist {
+	return predicate.Artist(sql.FieldNotNull(FieldDid))
 }
 
 // HasAppearingTracks applies the HasEdge predicate on the "appearing_tracks" edge.
