@@ -14,8 +14,10 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/Pineapple217/cvrs/pkg/ent/artist"
 	"github.com/Pineapple217/cvrs/pkg/ent/image"
+	"github.com/Pineapple217/cvrs/pkg/ent/processedimage"
 	"github.com/Pineapple217/cvrs/pkg/ent/release"
 	"github.com/Pineapple217/cvrs/pkg/ent/releaseappearance"
+	"github.com/Pineapple217/cvrs/pkg/ent/task"
 	"github.com/Pineapple217/cvrs/pkg/ent/track"
 	"github.com/Pineapple217/cvrs/pkg/ent/trackappearance"
 	"github.com/Pineapple217/cvrs/pkg/ent/user"
@@ -81,8 +83,10 @@ func checkColumn(table, column string) error {
 		columnCheck = sql.NewColumnCheck(map[string]func(string) bool{
 			artist.Table:            artist.ValidColumn,
 			image.Table:             image.ValidColumn,
+			processedimage.Table:    processedimage.ValidColumn,
 			release.Table:           release.ValidColumn,
 			releaseappearance.Table: releaseappearance.ValidColumn,
+			task.Table:              task.ValidColumn,
 			track.Table:             track.ValidColumn,
 			trackappearance.Table:   trackappearance.ValidColumn,
 			user.Table:              user.ValidColumn,

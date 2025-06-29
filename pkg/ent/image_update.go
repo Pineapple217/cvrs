@@ -10,10 +10,11 @@ import (
 
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
-	"entgo.io/ent/dialect/sql/sqljson"
 	"entgo.io/ent/schema/field"
+	"github.com/Pineapple217/cvrs/pkg/ent/artist"
 	"github.com/Pineapple217/cvrs/pkg/ent/image"
 	"github.com/Pineapple217/cvrs/pkg/ent/predicate"
+	"github.com/Pineapple217/cvrs/pkg/ent/processedimage"
 	"github.com/Pineapple217/cvrs/pkg/ent/release"
 	"github.com/Pineapple217/cvrs/pkg/ent/user"
 	"github.com/Pineapple217/cvrs/pkg/pid"
@@ -42,6 +43,20 @@ func (iu *ImageUpdate) SetFile(s string) *ImageUpdate {
 func (iu *ImageUpdate) SetNillableFile(s *string) *ImageUpdate {
 	if s != nil {
 		iu.SetFile(*s)
+	}
+	return iu
+}
+
+// SetOriginalName sets the "original_name" field.
+func (iu *ImageUpdate) SetOriginalName(s string) *ImageUpdate {
+	iu.mutation.SetOriginalName(s)
+	return iu
+}
+
+// SetNillableOriginalName sets the "original_name" field if the given value is not nil.
+func (iu *ImageUpdate) SetNillableOriginalName(s *string) *ImageUpdate {
+	if s != nil {
+		iu.SetOriginalName(*s)
 	}
 	return iu
 }
@@ -80,15 +95,45 @@ func (iu *ImageUpdate) ClearNote() *ImageUpdate {
 	return iu
 }
 
-// SetDimentions sets the "dimentions" field.
-func (iu *ImageUpdate) SetDimentions(i []int) *ImageUpdate {
-	iu.mutation.SetDimentions(i)
+// SetDimentionWidth sets the "dimention_width" field.
+func (iu *ImageUpdate) SetDimentionWidth(i int) *ImageUpdate {
+	iu.mutation.ResetDimentionWidth()
+	iu.mutation.SetDimentionWidth(i)
 	return iu
 }
 
-// AppendDimentions appends i to the "dimentions" field.
-func (iu *ImageUpdate) AppendDimentions(i []int) *ImageUpdate {
-	iu.mutation.AppendDimentions(i)
+// SetNillableDimentionWidth sets the "dimention_width" field if the given value is not nil.
+func (iu *ImageUpdate) SetNillableDimentionWidth(i *int) *ImageUpdate {
+	if i != nil {
+		iu.SetDimentionWidth(*i)
+	}
+	return iu
+}
+
+// AddDimentionWidth adds i to the "dimention_width" field.
+func (iu *ImageUpdate) AddDimentionWidth(i int) *ImageUpdate {
+	iu.mutation.AddDimentionWidth(i)
+	return iu
+}
+
+// SetDimentionHeight sets the "dimention_height" field.
+func (iu *ImageUpdate) SetDimentionHeight(i int) *ImageUpdate {
+	iu.mutation.ResetDimentionHeight()
+	iu.mutation.SetDimentionHeight(i)
+	return iu
+}
+
+// SetNillableDimentionHeight sets the "dimention_height" field if the given value is not nil.
+func (iu *ImageUpdate) SetNillableDimentionHeight(i *int) *ImageUpdate {
+	if i != nil {
+		iu.SetDimentionHeight(*i)
+	}
+	return iu
+}
+
+// AddDimentionHeight adds i to the "dimention_height" field.
+func (iu *ImageUpdate) AddDimentionHeight(i int) *ImageUpdate {
+	iu.mutation.AddDimentionHeight(i)
 	return iu
 }
 
@@ -145,9 +190,36 @@ func (iu *ImageUpdate) SetReleaseID(id pid.ID) *ImageUpdate {
 	return iu
 }
 
+// SetNillableReleaseID sets the "release" edge to the Release entity by ID if the given value is not nil.
+func (iu *ImageUpdate) SetNillableReleaseID(id *pid.ID) *ImageUpdate {
+	if id != nil {
+		iu = iu.SetReleaseID(*id)
+	}
+	return iu
+}
+
 // SetRelease sets the "release" edge to the Release entity.
 func (iu *ImageUpdate) SetRelease(r *Release) *ImageUpdate {
 	return iu.SetReleaseID(r.ID)
+}
+
+// SetArtistID sets the "artist" edge to the Artist entity by ID.
+func (iu *ImageUpdate) SetArtistID(id pid.ID) *ImageUpdate {
+	iu.mutation.SetArtistID(id)
+	return iu
+}
+
+// SetNillableArtistID sets the "artist" edge to the Artist entity by ID if the given value is not nil.
+func (iu *ImageUpdate) SetNillableArtistID(id *pid.ID) *ImageUpdate {
+	if id != nil {
+		iu = iu.SetArtistID(*id)
+	}
+	return iu
+}
+
+// SetArtist sets the "artist" edge to the Artist entity.
+func (iu *ImageUpdate) SetArtist(a *Artist) *ImageUpdate {
+	return iu.SetArtistID(a.ID)
 }
 
 // SetUploaderID sets the "uploader" edge to the User entity by ID.
@@ -161,6 +233,21 @@ func (iu *ImageUpdate) SetUploader(u *User) *ImageUpdate {
 	return iu.SetUploaderID(u.ID)
 }
 
+// AddProccesedImageIDs adds the "proccesed_image" edge to the ProcessedImage entity by IDs.
+func (iu *ImageUpdate) AddProccesedImageIDs(ids ...pid.ID) *ImageUpdate {
+	iu.mutation.AddProccesedImageIDs(ids...)
+	return iu
+}
+
+// AddProccesedImage adds the "proccesed_image" edges to the ProcessedImage entity.
+func (iu *ImageUpdate) AddProccesedImage(p ...*ProcessedImage) *ImageUpdate {
+	ids := make([]pid.ID, len(p))
+	for i := range p {
+		ids[i] = p[i].ID
+	}
+	return iu.AddProccesedImageIDs(ids...)
+}
+
 // Mutation returns the ImageMutation object of the builder.
 func (iu *ImageUpdate) Mutation() *ImageMutation {
 	return iu.mutation
@@ -172,15 +259,44 @@ func (iu *ImageUpdate) ClearRelease() *ImageUpdate {
 	return iu
 }
 
+// ClearArtist clears the "artist" edge to the Artist entity.
+func (iu *ImageUpdate) ClearArtist() *ImageUpdate {
+	iu.mutation.ClearArtist()
+	return iu
+}
+
 // ClearUploader clears the "uploader" edge to the User entity.
 func (iu *ImageUpdate) ClearUploader() *ImageUpdate {
 	iu.mutation.ClearUploader()
 	return iu
 }
 
+// ClearProccesedImage clears all "proccesed_image" edges to the ProcessedImage entity.
+func (iu *ImageUpdate) ClearProccesedImage() *ImageUpdate {
+	iu.mutation.ClearProccesedImage()
+	return iu
+}
+
+// RemoveProccesedImageIDs removes the "proccesed_image" edge to ProcessedImage entities by IDs.
+func (iu *ImageUpdate) RemoveProccesedImageIDs(ids ...pid.ID) *ImageUpdate {
+	iu.mutation.RemoveProccesedImageIDs(ids...)
+	return iu
+}
+
+// RemoveProccesedImage removes "proccesed_image" edges to ProcessedImage entities.
+func (iu *ImageUpdate) RemoveProccesedImage(p ...*ProcessedImage) *ImageUpdate {
+	ids := make([]pid.ID, len(p))
+	for i := range p {
+		ids[i] = p[i].ID
+	}
+	return iu.RemoveProccesedImageIDs(ids...)
+}
+
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (iu *ImageUpdate) Save(ctx context.Context) (int, error) {
-	iu.defaults()
+	if err := iu.defaults(); err != nil {
+		return 0, err
+	}
 	return withHooks(ctx, iu.sqlSave, iu.mutation, iu.hooks)
 }
 
@@ -207,11 +323,15 @@ func (iu *ImageUpdate) ExecX(ctx context.Context) {
 }
 
 // defaults sets the default values of the builder before save.
-func (iu *ImageUpdate) defaults() {
+func (iu *ImageUpdate) defaults() error {
 	if _, ok := iu.mutation.UpdatedAt(); !ok {
+		if image.UpdateDefaultUpdatedAt == nil {
+			return fmt.Errorf("ent: uninitialized image.UpdateDefaultUpdatedAt (forgotten import ent/runtime?)")
+		}
 		v := image.UpdateDefaultUpdatedAt()
 		iu.mutation.SetUpdatedAt(v)
 	}
+	return nil
 }
 
 // check runs all checks and user-defined validators on the builder.
@@ -221,13 +341,25 @@ func (iu *ImageUpdate) check() error {
 			return &ValidationError{Name: "file", err: fmt.Errorf(`ent: validator failed for field "Image.file": %w`, err)}
 		}
 	}
+	if v, ok := iu.mutation.OriginalName(); ok {
+		if err := image.OriginalNameValidator(v); err != nil {
+			return &ValidationError{Name: "original_name", err: fmt.Errorf(`ent: validator failed for field "Image.original_name": %w`, err)}
+		}
+	}
 	if v, ok := iu.mutation.GetType(); ok {
 		if err := image.TypeValidator(v); err != nil {
 			return &ValidationError{Name: "type", err: fmt.Errorf(`ent: validator failed for field "Image.type": %w`, err)}
 		}
 	}
-	if iu.mutation.ReleaseCleared() && len(iu.mutation.ReleaseIDs()) > 0 {
-		return errors.New(`ent: clearing a required unique edge "Image.release"`)
+	if v, ok := iu.mutation.DimentionWidth(); ok {
+		if err := image.DimentionWidthValidator(v); err != nil {
+			return &ValidationError{Name: "dimention_width", err: fmt.Errorf(`ent: validator failed for field "Image.dimention_width": %w`, err)}
+		}
+	}
+	if v, ok := iu.mutation.DimentionHeight(); ok {
+		if err := image.DimentionHeightValidator(v); err != nil {
+			return &ValidationError{Name: "dimention_height", err: fmt.Errorf(`ent: validator failed for field "Image.dimention_height": %w`, err)}
+		}
 	}
 	if iu.mutation.UploaderCleared() && len(iu.mutation.UploaderIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "Image.uploader"`)
@@ -250,6 +382,9 @@ func (iu *ImageUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	if value, ok := iu.mutation.File(); ok {
 		_spec.SetField(image.FieldFile, field.TypeString, value)
 	}
+	if value, ok := iu.mutation.OriginalName(); ok {
+		_spec.SetField(image.FieldOriginalName, field.TypeString, value)
+	}
 	if value, ok := iu.mutation.GetType(); ok {
 		_spec.SetField(image.FieldType, field.TypeEnum, value)
 	}
@@ -259,13 +394,17 @@ func (iu *ImageUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	if iu.mutation.NoteCleared() {
 		_spec.ClearField(image.FieldNote, field.TypeString)
 	}
-	if value, ok := iu.mutation.Dimentions(); ok {
-		_spec.SetField(image.FieldDimentions, field.TypeJSON, value)
+	if value, ok := iu.mutation.DimentionWidth(); ok {
+		_spec.SetField(image.FieldDimentionWidth, field.TypeInt, value)
 	}
-	if value, ok := iu.mutation.AppendedDimentions(); ok {
-		_spec.AddModifier(func(u *sql.UpdateBuilder) {
-			sqljson.Append(u, image.FieldDimentions, value)
-		})
+	if value, ok := iu.mutation.AddedDimentionWidth(); ok {
+		_spec.AddField(image.FieldDimentionWidth, field.TypeInt, value)
+	}
+	if value, ok := iu.mutation.DimentionHeight(); ok {
+		_spec.SetField(image.FieldDimentionHeight, field.TypeInt, value)
+	}
+	if value, ok := iu.mutation.AddedDimentionHeight(); ok {
+		_spec.AddField(image.FieldDimentionHeight, field.TypeInt, value)
 	}
 	if value, ok := iu.mutation.SizeBits(); ok {
 		_spec.SetField(image.FieldSizeBits, field.TypeUint32, value)
@@ -311,6 +450,35 @@ func (iu *ImageUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
+	if iu.mutation.ArtistCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: true,
+			Table:   image.ArtistTable,
+			Columns: []string{image.ArtistColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(artist.FieldID, field.TypeInt64),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := iu.mutation.ArtistIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: true,
+			Table:   image.ArtistTable,
+			Columns: []string{image.ArtistColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(artist.FieldID, field.TypeInt64),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
 	if iu.mutation.UploaderCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
@@ -333,6 +501,51 @@ func (iu *ImageUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeInt64),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if iu.mutation.ProccesedImageCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   image.ProccesedImageTable,
+			Columns: []string{image.ProccesedImageColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(processedimage.FieldID, field.TypeInt64),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := iu.mutation.RemovedProccesedImageIDs(); len(nodes) > 0 && !iu.mutation.ProccesedImageCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   image.ProccesedImageTable,
+			Columns: []string{image.ProccesedImageColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(processedimage.FieldID, field.TypeInt64),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := iu.mutation.ProccesedImageIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   image.ProccesedImageTable,
+			Columns: []string{image.ProccesedImageColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(processedimage.FieldID, field.TypeInt64),
 			},
 		}
 		for _, k := range nodes {
@@ -374,6 +587,20 @@ func (iuo *ImageUpdateOne) SetNillableFile(s *string) *ImageUpdateOne {
 	return iuo
 }
 
+// SetOriginalName sets the "original_name" field.
+func (iuo *ImageUpdateOne) SetOriginalName(s string) *ImageUpdateOne {
+	iuo.mutation.SetOriginalName(s)
+	return iuo
+}
+
+// SetNillableOriginalName sets the "original_name" field if the given value is not nil.
+func (iuo *ImageUpdateOne) SetNillableOriginalName(s *string) *ImageUpdateOne {
+	if s != nil {
+		iuo.SetOriginalName(*s)
+	}
+	return iuo
+}
+
 // SetType sets the "type" field.
 func (iuo *ImageUpdateOne) SetType(i image.Type) *ImageUpdateOne {
 	iuo.mutation.SetType(i)
@@ -408,15 +635,45 @@ func (iuo *ImageUpdateOne) ClearNote() *ImageUpdateOne {
 	return iuo
 }
 
-// SetDimentions sets the "dimentions" field.
-func (iuo *ImageUpdateOne) SetDimentions(i []int) *ImageUpdateOne {
-	iuo.mutation.SetDimentions(i)
+// SetDimentionWidth sets the "dimention_width" field.
+func (iuo *ImageUpdateOne) SetDimentionWidth(i int) *ImageUpdateOne {
+	iuo.mutation.ResetDimentionWidth()
+	iuo.mutation.SetDimentionWidth(i)
 	return iuo
 }
 
-// AppendDimentions appends i to the "dimentions" field.
-func (iuo *ImageUpdateOne) AppendDimentions(i []int) *ImageUpdateOne {
-	iuo.mutation.AppendDimentions(i)
+// SetNillableDimentionWidth sets the "dimention_width" field if the given value is not nil.
+func (iuo *ImageUpdateOne) SetNillableDimentionWidth(i *int) *ImageUpdateOne {
+	if i != nil {
+		iuo.SetDimentionWidth(*i)
+	}
+	return iuo
+}
+
+// AddDimentionWidth adds i to the "dimention_width" field.
+func (iuo *ImageUpdateOne) AddDimentionWidth(i int) *ImageUpdateOne {
+	iuo.mutation.AddDimentionWidth(i)
+	return iuo
+}
+
+// SetDimentionHeight sets the "dimention_height" field.
+func (iuo *ImageUpdateOne) SetDimentionHeight(i int) *ImageUpdateOne {
+	iuo.mutation.ResetDimentionHeight()
+	iuo.mutation.SetDimentionHeight(i)
+	return iuo
+}
+
+// SetNillableDimentionHeight sets the "dimention_height" field if the given value is not nil.
+func (iuo *ImageUpdateOne) SetNillableDimentionHeight(i *int) *ImageUpdateOne {
+	if i != nil {
+		iuo.SetDimentionHeight(*i)
+	}
+	return iuo
+}
+
+// AddDimentionHeight adds i to the "dimention_height" field.
+func (iuo *ImageUpdateOne) AddDimentionHeight(i int) *ImageUpdateOne {
+	iuo.mutation.AddDimentionHeight(i)
 	return iuo
 }
 
@@ -473,9 +730,36 @@ func (iuo *ImageUpdateOne) SetReleaseID(id pid.ID) *ImageUpdateOne {
 	return iuo
 }
 
+// SetNillableReleaseID sets the "release" edge to the Release entity by ID if the given value is not nil.
+func (iuo *ImageUpdateOne) SetNillableReleaseID(id *pid.ID) *ImageUpdateOne {
+	if id != nil {
+		iuo = iuo.SetReleaseID(*id)
+	}
+	return iuo
+}
+
 // SetRelease sets the "release" edge to the Release entity.
 func (iuo *ImageUpdateOne) SetRelease(r *Release) *ImageUpdateOne {
 	return iuo.SetReleaseID(r.ID)
+}
+
+// SetArtistID sets the "artist" edge to the Artist entity by ID.
+func (iuo *ImageUpdateOne) SetArtistID(id pid.ID) *ImageUpdateOne {
+	iuo.mutation.SetArtistID(id)
+	return iuo
+}
+
+// SetNillableArtistID sets the "artist" edge to the Artist entity by ID if the given value is not nil.
+func (iuo *ImageUpdateOne) SetNillableArtistID(id *pid.ID) *ImageUpdateOne {
+	if id != nil {
+		iuo = iuo.SetArtistID(*id)
+	}
+	return iuo
+}
+
+// SetArtist sets the "artist" edge to the Artist entity.
+func (iuo *ImageUpdateOne) SetArtist(a *Artist) *ImageUpdateOne {
+	return iuo.SetArtistID(a.ID)
 }
 
 // SetUploaderID sets the "uploader" edge to the User entity by ID.
@@ -489,6 +773,21 @@ func (iuo *ImageUpdateOne) SetUploader(u *User) *ImageUpdateOne {
 	return iuo.SetUploaderID(u.ID)
 }
 
+// AddProccesedImageIDs adds the "proccesed_image" edge to the ProcessedImage entity by IDs.
+func (iuo *ImageUpdateOne) AddProccesedImageIDs(ids ...pid.ID) *ImageUpdateOne {
+	iuo.mutation.AddProccesedImageIDs(ids...)
+	return iuo
+}
+
+// AddProccesedImage adds the "proccesed_image" edges to the ProcessedImage entity.
+func (iuo *ImageUpdateOne) AddProccesedImage(p ...*ProcessedImage) *ImageUpdateOne {
+	ids := make([]pid.ID, len(p))
+	for i := range p {
+		ids[i] = p[i].ID
+	}
+	return iuo.AddProccesedImageIDs(ids...)
+}
+
 // Mutation returns the ImageMutation object of the builder.
 func (iuo *ImageUpdateOne) Mutation() *ImageMutation {
 	return iuo.mutation
@@ -500,10 +799,37 @@ func (iuo *ImageUpdateOne) ClearRelease() *ImageUpdateOne {
 	return iuo
 }
 
+// ClearArtist clears the "artist" edge to the Artist entity.
+func (iuo *ImageUpdateOne) ClearArtist() *ImageUpdateOne {
+	iuo.mutation.ClearArtist()
+	return iuo
+}
+
 // ClearUploader clears the "uploader" edge to the User entity.
 func (iuo *ImageUpdateOne) ClearUploader() *ImageUpdateOne {
 	iuo.mutation.ClearUploader()
 	return iuo
+}
+
+// ClearProccesedImage clears all "proccesed_image" edges to the ProcessedImage entity.
+func (iuo *ImageUpdateOne) ClearProccesedImage() *ImageUpdateOne {
+	iuo.mutation.ClearProccesedImage()
+	return iuo
+}
+
+// RemoveProccesedImageIDs removes the "proccesed_image" edge to ProcessedImage entities by IDs.
+func (iuo *ImageUpdateOne) RemoveProccesedImageIDs(ids ...pid.ID) *ImageUpdateOne {
+	iuo.mutation.RemoveProccesedImageIDs(ids...)
+	return iuo
+}
+
+// RemoveProccesedImage removes "proccesed_image" edges to ProcessedImage entities.
+func (iuo *ImageUpdateOne) RemoveProccesedImage(p ...*ProcessedImage) *ImageUpdateOne {
+	ids := make([]pid.ID, len(p))
+	for i := range p {
+		ids[i] = p[i].ID
+	}
+	return iuo.RemoveProccesedImageIDs(ids...)
 }
 
 // Where appends a list predicates to the ImageUpdate builder.
@@ -521,7 +847,9 @@ func (iuo *ImageUpdateOne) Select(field string, fields ...string) *ImageUpdateOn
 
 // Save executes the query and returns the updated Image entity.
 func (iuo *ImageUpdateOne) Save(ctx context.Context) (*Image, error) {
-	iuo.defaults()
+	if err := iuo.defaults(); err != nil {
+		return nil, err
+	}
 	return withHooks(ctx, iuo.sqlSave, iuo.mutation, iuo.hooks)
 }
 
@@ -548,11 +876,15 @@ func (iuo *ImageUpdateOne) ExecX(ctx context.Context) {
 }
 
 // defaults sets the default values of the builder before save.
-func (iuo *ImageUpdateOne) defaults() {
+func (iuo *ImageUpdateOne) defaults() error {
 	if _, ok := iuo.mutation.UpdatedAt(); !ok {
+		if image.UpdateDefaultUpdatedAt == nil {
+			return fmt.Errorf("ent: uninitialized image.UpdateDefaultUpdatedAt (forgotten import ent/runtime?)")
+		}
 		v := image.UpdateDefaultUpdatedAt()
 		iuo.mutation.SetUpdatedAt(v)
 	}
+	return nil
 }
 
 // check runs all checks and user-defined validators on the builder.
@@ -562,13 +894,25 @@ func (iuo *ImageUpdateOne) check() error {
 			return &ValidationError{Name: "file", err: fmt.Errorf(`ent: validator failed for field "Image.file": %w`, err)}
 		}
 	}
+	if v, ok := iuo.mutation.OriginalName(); ok {
+		if err := image.OriginalNameValidator(v); err != nil {
+			return &ValidationError{Name: "original_name", err: fmt.Errorf(`ent: validator failed for field "Image.original_name": %w`, err)}
+		}
+	}
 	if v, ok := iuo.mutation.GetType(); ok {
 		if err := image.TypeValidator(v); err != nil {
 			return &ValidationError{Name: "type", err: fmt.Errorf(`ent: validator failed for field "Image.type": %w`, err)}
 		}
 	}
-	if iuo.mutation.ReleaseCleared() && len(iuo.mutation.ReleaseIDs()) > 0 {
-		return errors.New(`ent: clearing a required unique edge "Image.release"`)
+	if v, ok := iuo.mutation.DimentionWidth(); ok {
+		if err := image.DimentionWidthValidator(v); err != nil {
+			return &ValidationError{Name: "dimention_width", err: fmt.Errorf(`ent: validator failed for field "Image.dimention_width": %w`, err)}
+		}
+	}
+	if v, ok := iuo.mutation.DimentionHeight(); ok {
+		if err := image.DimentionHeightValidator(v); err != nil {
+			return &ValidationError{Name: "dimention_height", err: fmt.Errorf(`ent: validator failed for field "Image.dimention_height": %w`, err)}
+		}
 	}
 	if iuo.mutation.UploaderCleared() && len(iuo.mutation.UploaderIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "Image.uploader"`)
@@ -608,6 +952,9 @@ func (iuo *ImageUpdateOne) sqlSave(ctx context.Context) (_node *Image, err error
 	if value, ok := iuo.mutation.File(); ok {
 		_spec.SetField(image.FieldFile, field.TypeString, value)
 	}
+	if value, ok := iuo.mutation.OriginalName(); ok {
+		_spec.SetField(image.FieldOriginalName, field.TypeString, value)
+	}
 	if value, ok := iuo.mutation.GetType(); ok {
 		_spec.SetField(image.FieldType, field.TypeEnum, value)
 	}
@@ -617,13 +964,17 @@ func (iuo *ImageUpdateOne) sqlSave(ctx context.Context) (_node *Image, err error
 	if iuo.mutation.NoteCleared() {
 		_spec.ClearField(image.FieldNote, field.TypeString)
 	}
-	if value, ok := iuo.mutation.Dimentions(); ok {
-		_spec.SetField(image.FieldDimentions, field.TypeJSON, value)
+	if value, ok := iuo.mutation.DimentionWidth(); ok {
+		_spec.SetField(image.FieldDimentionWidth, field.TypeInt, value)
 	}
-	if value, ok := iuo.mutation.AppendedDimentions(); ok {
-		_spec.AddModifier(func(u *sql.UpdateBuilder) {
-			sqljson.Append(u, image.FieldDimentions, value)
-		})
+	if value, ok := iuo.mutation.AddedDimentionWidth(); ok {
+		_spec.AddField(image.FieldDimentionWidth, field.TypeInt, value)
+	}
+	if value, ok := iuo.mutation.DimentionHeight(); ok {
+		_spec.SetField(image.FieldDimentionHeight, field.TypeInt, value)
+	}
+	if value, ok := iuo.mutation.AddedDimentionHeight(); ok {
+		_spec.AddField(image.FieldDimentionHeight, field.TypeInt, value)
 	}
 	if value, ok := iuo.mutation.SizeBits(); ok {
 		_spec.SetField(image.FieldSizeBits, field.TypeUint32, value)
@@ -669,6 +1020,35 @@ func (iuo *ImageUpdateOne) sqlSave(ctx context.Context) (_node *Image, err error
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
+	if iuo.mutation.ArtistCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: true,
+			Table:   image.ArtistTable,
+			Columns: []string{image.ArtistColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(artist.FieldID, field.TypeInt64),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := iuo.mutation.ArtistIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: true,
+			Table:   image.ArtistTable,
+			Columns: []string{image.ArtistColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(artist.FieldID, field.TypeInt64),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
 	if iuo.mutation.UploaderCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
@@ -691,6 +1071,51 @@ func (iuo *ImageUpdateOne) sqlSave(ctx context.Context) (_node *Image, err error
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeInt64),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if iuo.mutation.ProccesedImageCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   image.ProccesedImageTable,
+			Columns: []string{image.ProccesedImageColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(processedimage.FieldID, field.TypeInt64),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := iuo.mutation.RemovedProccesedImageIDs(); len(nodes) > 0 && !iuo.mutation.ProccesedImageCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   image.ProccesedImageTable,
+			Columns: []string{image.ProccesedImageColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(processedimage.FieldID, field.TypeInt64),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := iuo.mutation.ProccesedImageIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   image.ProccesedImageTable,
+			Columns: []string{image.ProccesedImageColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(processedimage.FieldID, field.TypeInt64),
 			},
 		}
 		for _, k := range nodes {

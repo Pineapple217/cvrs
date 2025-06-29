@@ -1,5 +1,3 @@
-# https://taskfile.dev
-
 version: "3"
 
 vars:
@@ -32,6 +30,11 @@ tasks:
     deps: [build]
     cmds:
       - "{{.OUTPUT_DIR}}/{{.BINARY_NAME}} run"
+
+  frontend:run:
+    dir: ./frontend
+    cmds:
+      - npm run dev
 
   docker-build:
     deps: [codegen]

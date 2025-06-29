@@ -3,13 +3,13 @@
 package ent
 
 import (
-	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
 
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
+	"github.com/Pineapple217/cvrs/pkg/ent/artist"
 	"github.com/Pineapple217/cvrs/pkg/ent/image"
 	"github.com/Pineapple217/cvrs/pkg/ent/release"
 	"github.com/Pineapple217/cvrs/pkg/ent/user"
@@ -23,23 +23,28 @@ type Image struct {
 	ID pid.ID `json:"id,omitempty"`
 	// File holds the value of the "file" field.
 	File string `json:"file,omitempty"`
+	// OriginalName holds the value of the "original_name" field.
+	OriginalName string `json:"original_name,omitempty"`
 	// Type holds the value of the "type" field.
 	Type image.Type `json:"type,omitempty"`
 	// Note holds the value of the "note" field.
 	Note *string `json:"note,omitempty"`
-	// Dimentions holds the value of the "dimentions" field.
-	Dimentions []int `json:"dimentions,omitempty"`
+	// DimentionWidth holds the value of the "dimention_width" field.
+	DimentionWidth int `json:"dimention_width,omitempty"`
+	// DimentionHeight holds the value of the "dimention_height" field.
+	DimentionHeight int `json:"dimention_height,omitempty"`
 	// SizeBits holds the value of the "size_bits" field.
 	SizeBits uint32 `json:"size_bits,omitempty"`
 	// CreatedAt holds the value of the "created_at" field.
-	CreatedAt time.Time `json:"created_at,omitempty"`
+	CreatedAt time.Time `json:"created_at,omitzero"`
 	// UpdatedAt holds the value of the "updated_at" field.
-	UpdatedAt time.Time `json:"updated_at,omitempty"`
+	UpdatedAt time.Time `json:"updated_at,omitzero"`
 	// DeletedAt holds the value of the "deleted_at" field.
-	DeletedAt *time.Time `json:"deleted_at,omitempty"`
+	DeletedAt *time.Time `json:"deleted_at,omitzero"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the ImageQuery when eager-loading is set.
 	Edges         ImageEdges `json:"edges"`
+	artist_image  *pid.ID
 	release_image *pid.ID
 	user_images   *pid.ID
 	selectValues  sql.SelectValues
@@ -49,11 +54,15 @@ type Image struct {
 type ImageEdges struct {
 	// Release holds the value of the release edge.
 	Release *Release `json:"release,omitempty"`
+	// Artist holds the value of the artist edge.
+	Artist *Artist `json:"artist,omitempty"`
 	// Uploader holds the value of the uploader edge.
 	Uploader *User `json:"uploader,omitempty"`
+	// ProccesedImage holds the value of the proccesed_image edge.
+	ProccesedImage []*ProcessedImage `json:"proccesed_image,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [2]bool
+	loadedTypes [4]bool
 }
 
 // ReleaseOrErr returns the Release value or an error if the edge
@@ -67,15 +76,35 @@ func (e ImageEdges) ReleaseOrErr() (*Release, error) {
 	return nil, &NotLoadedError{edge: "release"}
 }
 
+// ArtistOrErr returns the Artist value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e ImageEdges) ArtistOrErr() (*Artist, error) {
+	if e.Artist != nil {
+		return e.Artist, nil
+	} else if e.loadedTypes[1] {
+		return nil, &NotFoundError{label: artist.Label}
+	}
+	return nil, &NotLoadedError{edge: "artist"}
+}
+
 // UploaderOrErr returns the Uploader value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
 func (e ImageEdges) UploaderOrErr() (*User, error) {
 	if e.Uploader != nil {
 		return e.Uploader, nil
-	} else if e.loadedTypes[1] {
+	} else if e.loadedTypes[2] {
 		return nil, &NotFoundError{label: user.Label}
 	}
 	return nil, &NotLoadedError{edge: "uploader"}
+}
+
+// ProccesedImageOrErr returns the ProccesedImage value or an error if the edge
+// was not loaded in eager-loading.
+func (e ImageEdges) ProccesedImageOrErr() ([]*ProcessedImage, error) {
+	if e.loadedTypes[3] {
+		return e.ProccesedImage, nil
+	}
+	return nil, &NotLoadedError{edge: "proccesed_image"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -83,17 +112,17 @@ func (*Image) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case image.FieldDimentions:
-			values[i] = new([]byte)
-		case image.FieldID, image.FieldSizeBits:
+		case image.FieldID, image.FieldDimentionWidth, image.FieldDimentionHeight, image.FieldSizeBits:
 			values[i] = new(sql.NullInt64)
-		case image.FieldFile, image.FieldType, image.FieldNote:
+		case image.FieldFile, image.FieldOriginalName, image.FieldType, image.FieldNote:
 			values[i] = new(sql.NullString)
 		case image.FieldCreatedAt, image.FieldUpdatedAt, image.FieldDeletedAt:
 			values[i] = new(sql.NullTime)
-		case image.ForeignKeys[0]: // release_image
+		case image.ForeignKeys[0]: // artist_image
 			values[i] = new(sql.NullInt64)
-		case image.ForeignKeys[1]: // user_images
+		case image.ForeignKeys[1]: // release_image
+			values[i] = new(sql.NullInt64)
+		case image.ForeignKeys[2]: // user_images
 			values[i] = new(sql.NullInt64)
 		default:
 			values[i] = new(sql.UnknownType)
@@ -122,6 +151,12 @@ func (i *Image) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				i.File = value.String
 			}
+		case image.FieldOriginalName:
+			if value, ok := values[j].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field original_name", values[j])
+			} else if value.Valid {
+				i.OriginalName = value.String
+			}
 		case image.FieldType:
 			if value, ok := values[j].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field type", values[j])
@@ -135,13 +170,17 @@ func (i *Image) assignValues(columns []string, values []any) error {
 				i.Note = new(string)
 				*i.Note = value.String
 			}
-		case image.FieldDimentions:
-			if value, ok := values[j].(*[]byte); !ok {
-				return fmt.Errorf("unexpected type %T for field dimentions", values[j])
-			} else if value != nil && len(*value) > 0 {
-				if err := json.Unmarshal(*value, &i.Dimentions); err != nil {
-					return fmt.Errorf("unmarshal field dimentions: %w", err)
-				}
+		case image.FieldDimentionWidth:
+			if value, ok := values[j].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field dimention_width", values[j])
+			} else if value.Valid {
+				i.DimentionWidth = int(value.Int64)
+			}
+		case image.FieldDimentionHeight:
+			if value, ok := values[j].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field dimention_height", values[j])
+			} else if value.Valid {
+				i.DimentionHeight = int(value.Int64)
 			}
 		case image.FieldSizeBits:
 			if value, ok := values[j].(*sql.NullInt64); !ok {
@@ -170,12 +209,19 @@ func (i *Image) assignValues(columns []string, values []any) error {
 			}
 		case image.ForeignKeys[0]:
 			if value, ok := values[j].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field artist_image", values[j])
+			} else if value.Valid {
+				i.artist_image = new(pid.ID)
+				*i.artist_image = pid.ID(value.Int64)
+			}
+		case image.ForeignKeys[1]:
+			if value, ok := values[j].(*sql.NullInt64); !ok {
 				return fmt.Errorf("unexpected type %T for field release_image", values[j])
 			} else if value.Valid {
 				i.release_image = new(pid.ID)
 				*i.release_image = pid.ID(value.Int64)
 			}
-		case image.ForeignKeys[1]:
+		case image.ForeignKeys[2]:
 			if value, ok := values[j].(*sql.NullInt64); !ok {
 				return fmt.Errorf("unexpected type %T for field user_images", values[j])
 			} else if value.Valid {
@@ -200,9 +246,19 @@ func (i *Image) QueryRelease() *ReleaseQuery {
 	return NewImageClient(i.config).QueryRelease(i)
 }
 
+// QueryArtist queries the "artist" edge of the Image entity.
+func (i *Image) QueryArtist() *ArtistQuery {
+	return NewImageClient(i.config).QueryArtist(i)
+}
+
 // QueryUploader queries the "uploader" edge of the Image entity.
 func (i *Image) QueryUploader() *UserQuery {
 	return NewImageClient(i.config).QueryUploader(i)
+}
+
+// QueryProccesedImage queries the "proccesed_image" edge of the Image entity.
+func (i *Image) QueryProccesedImage() *ProcessedImageQuery {
+	return NewImageClient(i.config).QueryProccesedImage(i)
 }
 
 // Update returns a builder for updating this Image.
@@ -231,6 +287,9 @@ func (i *Image) String() string {
 	builder.WriteString("file=")
 	builder.WriteString(i.File)
 	builder.WriteString(", ")
+	builder.WriteString("original_name=")
+	builder.WriteString(i.OriginalName)
+	builder.WriteString(", ")
 	builder.WriteString("type=")
 	builder.WriteString(fmt.Sprintf("%v", i.Type))
 	builder.WriteString(", ")
@@ -239,8 +298,11 @@ func (i *Image) String() string {
 		builder.WriteString(*v)
 	}
 	builder.WriteString(", ")
-	builder.WriteString("dimentions=")
-	builder.WriteString(fmt.Sprintf("%v", i.Dimentions))
+	builder.WriteString("dimention_width=")
+	builder.WriteString(fmt.Sprintf("%v", i.DimentionWidth))
+	builder.WriteString(", ")
+	builder.WriteString("dimention_height=")
+	builder.WriteString(fmt.Sprintf("%v", i.DimentionHeight))
 	builder.WriteString(", ")
 	builder.WriteString("size_bits=")
 	builder.WriteString(fmt.Sprintf("%v", i.SizeBits))

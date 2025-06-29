@@ -12,6 +12,12 @@ export function Header() {
           <li>
             <a href="/">Home</a>
           </li>
+          <li>
+            <a href="/artists">Artists</a>
+          </li>
+          <li>
+            <a href="/releases">Releases</a>
+          </li>
           {payload?.adm && (
             <li>
               <a href="/admin">Admin</a>

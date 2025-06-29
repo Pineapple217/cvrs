@@ -6,11 +6,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/Pineapple217/cvrs/pkg/ent/artist"
+	"github.com/Pineapple217/cvrs/pkg/ent/image"
 	"github.com/Pineapple217/cvrs/pkg/ent/predicate"
 	"github.com/Pineapple217/cvrs/pkg/ent/release"
 	"github.com/Pineapple217/cvrs/pkg/ent/track"
@@ -44,6 +46,32 @@ func (au *ArtistUpdate) SetNillableName(s *string) *ArtistUpdate {
 	return au
 }
 
+// SetUpdatedAt sets the "updated_at" field.
+func (au *ArtistUpdate) SetUpdatedAt(t time.Time) *ArtistUpdate {
+	au.mutation.SetUpdatedAt(t)
+	return au
+}
+
+// SetDeletedAt sets the "deleted_at" field.
+func (au *ArtistUpdate) SetDeletedAt(t time.Time) *ArtistUpdate {
+	au.mutation.SetDeletedAt(t)
+	return au
+}
+
+// SetNillableDeletedAt sets the "deleted_at" field if the given value is not nil.
+func (au *ArtistUpdate) SetNillableDeletedAt(t *time.Time) *ArtistUpdate {
+	if t != nil {
+		au.SetDeletedAt(*t)
+	}
+	return au
+}
+
+// ClearDeletedAt clears the value of the "deleted_at" field.
+func (au *ArtistUpdate) ClearDeletedAt() *ArtistUpdate {
+	au.mutation.ClearDeletedAt()
+	return au
+}
+
 // AddAppearingTrackIDs adds the "appearing_tracks" edge to the Track entity by IDs.
 func (au *ArtistUpdate) AddAppearingTrackIDs(ids ...pid.ID) *ArtistUpdate {
 	au.mutation.AddAppearingTrackIDs(ids...)
@@ -72,6 +100,25 @@ func (au *ArtistUpdate) AddAppearingReleases(r ...*Release) *ArtistUpdate {
 		ids[i] = r[i].ID
 	}
 	return au.AddAppearingReleaseIDs(ids...)
+}
+
+// SetImageID sets the "image" edge to the Image entity by ID.
+func (au *ArtistUpdate) SetImageID(id pid.ID) *ArtistUpdate {
+	au.mutation.SetImageID(id)
+	return au
+}
+
+// SetNillableImageID sets the "image" edge to the Image entity by ID if the given value is not nil.
+func (au *ArtistUpdate) SetNillableImageID(id *pid.ID) *ArtistUpdate {
+	if id != nil {
+		au = au.SetImageID(*id)
+	}
+	return au
+}
+
+// SetImage sets the "image" edge to the Image entity.
+func (au *ArtistUpdate) SetImage(i *Image) *ArtistUpdate {
+	return au.SetImageID(i.ID)
 }
 
 // Mutation returns the ArtistMutation object of the builder.
@@ -121,8 +168,15 @@ func (au *ArtistUpdate) RemoveAppearingReleases(r ...*Release) *ArtistUpdate {
 	return au.RemoveAppearingReleaseIDs(ids...)
 }
 
+// ClearImage clears the "image" edge to the Image entity.
+func (au *ArtistUpdate) ClearImage() *ArtistUpdate {
+	au.mutation.ClearImage()
+	return au
+}
+
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (au *ArtistUpdate) Save(ctx context.Context) (int, error) {
+	au.defaults()
 	return withHooks(ctx, au.sqlSave, au.mutation, au.hooks)
 }
 
@@ -145,6 +199,14 @@ func (au *ArtistUpdate) Exec(ctx context.Context) error {
 func (au *ArtistUpdate) ExecX(ctx context.Context) {
 	if err := au.Exec(ctx); err != nil {
 		panic(err)
+	}
+}
+
+// defaults sets the default values of the builder before save.
+func (au *ArtistUpdate) defaults() {
+	if _, ok := au.mutation.UpdatedAt(); !ok {
+		v := artist.UpdateDefaultUpdatedAt()
+		au.mutation.SetUpdatedAt(v)
 	}
 }
 
@@ -172,6 +234,15 @@ func (au *ArtistUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	}
 	if value, ok := au.mutation.Name(); ok {
 		_spec.SetField(artist.FieldName, field.TypeString, value)
+	}
+	if value, ok := au.mutation.UpdatedAt(); ok {
+		_spec.SetField(artist.FieldUpdatedAt, field.TypeTime, value)
+	}
+	if value, ok := au.mutation.DeletedAt(); ok {
+		_spec.SetField(artist.FieldDeletedAt, field.TypeTime, value)
+	}
+	if au.mutation.DeletedAtCleared() {
+		_spec.ClearField(artist.FieldDeletedAt, field.TypeTime)
 	}
 	if au.mutation.AppearingTracksCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -287,6 +358,35 @@ func (au *ArtistUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		edge.Target.Fields = specE.Fields
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
+	if au.mutation.ImageCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: false,
+			Table:   artist.ImageTable,
+			Columns: []string{artist.ImageColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(image.FieldID, field.TypeInt64),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := au.mutation.ImageIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: false,
+			Table:   artist.ImageTable,
+			Columns: []string{artist.ImageColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(image.FieldID, field.TypeInt64),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
 	if n, err = sqlgraph.UpdateNodes(ctx, au.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{artist.Label}
@@ -321,6 +421,32 @@ func (auo *ArtistUpdateOne) SetNillableName(s *string) *ArtistUpdateOne {
 	return auo
 }
 
+// SetUpdatedAt sets the "updated_at" field.
+func (auo *ArtistUpdateOne) SetUpdatedAt(t time.Time) *ArtistUpdateOne {
+	auo.mutation.SetUpdatedAt(t)
+	return auo
+}
+
+// SetDeletedAt sets the "deleted_at" field.
+func (auo *ArtistUpdateOne) SetDeletedAt(t time.Time) *ArtistUpdateOne {
+	auo.mutation.SetDeletedAt(t)
+	return auo
+}
+
+// SetNillableDeletedAt sets the "deleted_at" field if the given value is not nil.
+func (auo *ArtistUpdateOne) SetNillableDeletedAt(t *time.Time) *ArtistUpdateOne {
+	if t != nil {
+		auo.SetDeletedAt(*t)
+	}
+	return auo
+}
+
+// ClearDeletedAt clears the value of the "deleted_at" field.
+func (auo *ArtistUpdateOne) ClearDeletedAt() *ArtistUpdateOne {
+	auo.mutation.ClearDeletedAt()
+	return auo
+}
+
 // AddAppearingTrackIDs adds the "appearing_tracks" edge to the Track entity by IDs.
 func (auo *ArtistUpdateOne) AddAppearingTrackIDs(ids ...pid.ID) *ArtistUpdateOne {
 	auo.mutation.AddAppearingTrackIDs(ids...)
@@ -349,6 +475,25 @@ func (auo *ArtistUpdateOne) AddAppearingReleases(r ...*Release) *ArtistUpdateOne
 		ids[i] = r[i].ID
 	}
 	return auo.AddAppearingReleaseIDs(ids...)
+}
+
+// SetImageID sets the "image" edge to the Image entity by ID.
+func (auo *ArtistUpdateOne) SetImageID(id pid.ID) *ArtistUpdateOne {
+	auo.mutation.SetImageID(id)
+	return auo
+}
+
+// SetNillableImageID sets the "image" edge to the Image entity by ID if the given value is not nil.
+func (auo *ArtistUpdateOne) SetNillableImageID(id *pid.ID) *ArtistUpdateOne {
+	if id != nil {
+		auo = auo.SetImageID(*id)
+	}
+	return auo
+}
+
+// SetImage sets the "image" edge to the Image entity.
+func (auo *ArtistUpdateOne) SetImage(i *Image) *ArtistUpdateOne {
+	return auo.SetImageID(i.ID)
 }
 
 // Mutation returns the ArtistMutation object of the builder.
@@ -398,6 +543,12 @@ func (auo *ArtistUpdateOne) RemoveAppearingReleases(r ...*Release) *ArtistUpdate
 	return auo.RemoveAppearingReleaseIDs(ids...)
 }
 
+// ClearImage clears the "image" edge to the Image entity.
+func (auo *ArtistUpdateOne) ClearImage() *ArtistUpdateOne {
+	auo.mutation.ClearImage()
+	return auo
+}
+
 // Where appends a list predicates to the ArtistUpdate builder.
 func (auo *ArtistUpdateOne) Where(ps ...predicate.Artist) *ArtistUpdateOne {
 	auo.mutation.Where(ps...)
@@ -413,6 +564,7 @@ func (auo *ArtistUpdateOne) Select(field string, fields ...string) *ArtistUpdate
 
 // Save executes the query and returns the updated Artist entity.
 func (auo *ArtistUpdateOne) Save(ctx context.Context) (*Artist, error) {
+	auo.defaults()
 	return withHooks(ctx, auo.sqlSave, auo.mutation, auo.hooks)
 }
 
@@ -435,6 +587,14 @@ func (auo *ArtistUpdateOne) Exec(ctx context.Context) error {
 func (auo *ArtistUpdateOne) ExecX(ctx context.Context) {
 	if err := auo.Exec(ctx); err != nil {
 		panic(err)
+	}
+}
+
+// defaults sets the default values of the builder before save.
+func (auo *ArtistUpdateOne) defaults() {
+	if _, ok := auo.mutation.UpdatedAt(); !ok {
+		v := artist.UpdateDefaultUpdatedAt()
+		auo.mutation.SetUpdatedAt(v)
 	}
 }
 
@@ -479,6 +639,15 @@ func (auo *ArtistUpdateOne) sqlSave(ctx context.Context) (_node *Artist, err err
 	}
 	if value, ok := auo.mutation.Name(); ok {
 		_spec.SetField(artist.FieldName, field.TypeString, value)
+	}
+	if value, ok := auo.mutation.UpdatedAt(); ok {
+		_spec.SetField(artist.FieldUpdatedAt, field.TypeTime, value)
+	}
+	if value, ok := auo.mutation.DeletedAt(); ok {
+		_spec.SetField(artist.FieldDeletedAt, field.TypeTime, value)
+	}
+	if auo.mutation.DeletedAtCleared() {
+		_spec.ClearField(artist.FieldDeletedAt, field.TypeTime)
 	}
 	if auo.mutation.AppearingTracksCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -592,6 +761,35 @@ func (auo *ArtistUpdateOne) sqlSave(ctx context.Context) (_node *Artist, err err
 		createE.defaults()
 		_, specE := createE.createSpec()
 		edge.Target.Fields = specE.Fields
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if auo.mutation.ImageCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: false,
+			Table:   artist.ImageTable,
+			Columns: []string{artist.ImageColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(image.FieldID, field.TypeInt64),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := auo.mutation.ImageIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: false,
+			Table:   artist.ImageTable,
+			Columns: []string{artist.ImageColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(image.FieldID, field.TypeInt64),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	_node = &Artist{config: auo.config}

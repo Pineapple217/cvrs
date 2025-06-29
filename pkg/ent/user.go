@@ -25,7 +25,7 @@ type User struct {
 	// IsAdmin holds the value of the "is_admin" field.
 	IsAdmin bool `json:"is_admin"`
 	// CreatedAt holds the value of the "created_at" field.
-	CreatedAt time.Time `json:"created_at,omitempty"`
+	CreatedAt time.Time `json:"created_at,omitzero"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the UserQuery when eager-loading is set.
 	Edges        UserEdges `json:"edges"`

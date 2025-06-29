@@ -13,6 +13,7 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/Pineapple217/cvrs/pkg/ent/artist"
+	"github.com/Pineapple217/cvrs/pkg/ent/image"
 	"github.com/Pineapple217/cvrs/pkg/ent/predicate"
 	"github.com/Pineapple217/cvrs/pkg/ent/release"
 	"github.com/Pineapple217/cvrs/pkg/ent/releaseappearance"
@@ -30,6 +31,7 @@ type ArtistQuery struct {
 	predicates            []predicate.Artist
 	withAppearingTracks   *TrackQuery
 	withAppearingReleases *ReleaseQuery
+	withImage             *ImageQuery
 	withTrackAppearance   *TrackAppearanceQuery
 	withReleaseAppearance *ReleaseAppearanceQuery
 	// intermediate query (i.e. traversal path).
@@ -105,6 +107,28 @@ func (aq *ArtistQuery) QueryAppearingReleases() *ReleaseQuery {
 			sqlgraph.From(artist.Table, artist.FieldID, selector),
 			sqlgraph.To(release.Table, release.FieldID),
 			sqlgraph.Edge(sqlgraph.M2M, false, artist.AppearingReleasesTable, artist.AppearingReleasesPrimaryKey...),
+		)
+		fromU = sqlgraph.SetNeighbors(aq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryImage chains the current query on the "image" edge.
+func (aq *ArtistQuery) QueryImage() *ImageQuery {
+	query := (&ImageClient{config: aq.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := aq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := aq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(artist.Table, artist.FieldID, selector),
+			sqlgraph.To(image.Table, image.FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, false, artist.ImageTable, artist.ImageColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(aq.driver.Dialect(), step)
 		return fromU, nil
@@ -350,6 +374,7 @@ func (aq *ArtistQuery) Clone() *ArtistQuery {
 		predicates:            append([]predicate.Artist{}, aq.predicates...),
 		withAppearingTracks:   aq.withAppearingTracks.Clone(),
 		withAppearingReleases: aq.withAppearingReleases.Clone(),
+		withImage:             aq.withImage.Clone(),
 		withTrackAppearance:   aq.withTrackAppearance.Clone(),
 		withReleaseAppearance: aq.withReleaseAppearance.Clone(),
 		// clone intermediate query.
@@ -377,6 +402,17 @@ func (aq *ArtistQuery) WithAppearingReleases(opts ...func(*ReleaseQuery)) *Artis
 		opt(query)
 	}
 	aq.withAppearingReleases = query
+	return aq
+}
+
+// WithImage tells the query-builder to eager-load the nodes that are connected to
+// the "image" edge. The optional arguments are used to configure the query builder of the edge.
+func (aq *ArtistQuery) WithImage(opts ...func(*ImageQuery)) *ArtistQuery {
+	query := (&ImageClient{config: aq.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	aq.withImage = query
 	return aq
 }
 
@@ -480,9 +516,10 @@ func (aq *ArtistQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Artis
 	var (
 		nodes       = []*Artist{}
 		_spec       = aq.querySpec()
-		loadedTypes = [4]bool{
+		loadedTypes = [5]bool{
 			aq.withAppearingTracks != nil,
 			aq.withAppearingReleases != nil,
+			aq.withImage != nil,
 			aq.withTrackAppearance != nil,
 			aq.withReleaseAppearance != nil,
 		}
@@ -516,6 +553,12 @@ func (aq *ArtistQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Artis
 		if err := aq.loadAppearingReleases(ctx, query, nodes,
 			func(n *Artist) { n.Edges.AppearingReleases = []*Release{} },
 			func(n *Artist, e *Release) { n.Edges.AppearingReleases = append(n.Edges.AppearingReleases, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := aq.withImage; query != nil {
+		if err := aq.loadImage(ctx, query, nodes, nil,
+			func(n *Artist, e *Image) { n.Edges.Image = e }); err != nil {
 			return nil, err
 		}
 	}
@@ -657,6 +700,34 @@ func (aq *ArtistQuery) loadAppearingReleases(ctx context.Context, query *Release
 		for kn := range nodes {
 			assign(kn, n)
 		}
+	}
+	return nil
+}
+func (aq *ArtistQuery) loadImage(ctx context.Context, query *ImageQuery, nodes []*Artist, init func(*Artist), assign func(*Artist, *Image)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[pid.ID]*Artist)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+	}
+	query.withFKs = true
+	query.Where(predicate.Image(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(artist.ImageColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.artist_image
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "artist_image" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "artist_image" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
 	}
 	return nil
 }

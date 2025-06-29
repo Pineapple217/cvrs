@@ -61,9 +61,24 @@ func File(v string) predicate.Image {
 	return predicate.Image(sql.FieldEQ(FieldFile, v))
 }
 
+// OriginalName applies equality check predicate on the "original_name" field. It's identical to OriginalNameEQ.
+func OriginalName(v string) predicate.Image {
+	return predicate.Image(sql.FieldEQ(FieldOriginalName, v))
+}
+
 // Note applies equality check predicate on the "note" field. It's identical to NoteEQ.
 func Note(v string) predicate.Image {
 	return predicate.Image(sql.FieldEQ(FieldNote, v))
+}
+
+// DimentionWidth applies equality check predicate on the "dimention_width" field. It's identical to DimentionWidthEQ.
+func DimentionWidth(v int) predicate.Image {
+	return predicate.Image(sql.FieldEQ(FieldDimentionWidth, v))
+}
+
+// DimentionHeight applies equality check predicate on the "dimention_height" field. It's identical to DimentionHeightEQ.
+func DimentionHeight(v int) predicate.Image {
+	return predicate.Image(sql.FieldEQ(FieldDimentionHeight, v))
 }
 
 // SizeBits applies equality check predicate on the "size_bits" field. It's identical to SizeBitsEQ.
@@ -149,6 +164,71 @@ func FileEqualFold(v string) predicate.Image {
 // FileContainsFold applies the ContainsFold predicate on the "file" field.
 func FileContainsFold(v string) predicate.Image {
 	return predicate.Image(sql.FieldContainsFold(FieldFile, v))
+}
+
+// OriginalNameEQ applies the EQ predicate on the "original_name" field.
+func OriginalNameEQ(v string) predicate.Image {
+	return predicate.Image(sql.FieldEQ(FieldOriginalName, v))
+}
+
+// OriginalNameNEQ applies the NEQ predicate on the "original_name" field.
+func OriginalNameNEQ(v string) predicate.Image {
+	return predicate.Image(sql.FieldNEQ(FieldOriginalName, v))
+}
+
+// OriginalNameIn applies the In predicate on the "original_name" field.
+func OriginalNameIn(vs ...string) predicate.Image {
+	return predicate.Image(sql.FieldIn(FieldOriginalName, vs...))
+}
+
+// OriginalNameNotIn applies the NotIn predicate on the "original_name" field.
+func OriginalNameNotIn(vs ...string) predicate.Image {
+	return predicate.Image(sql.FieldNotIn(FieldOriginalName, vs...))
+}
+
+// OriginalNameGT applies the GT predicate on the "original_name" field.
+func OriginalNameGT(v string) predicate.Image {
+	return predicate.Image(sql.FieldGT(FieldOriginalName, v))
+}
+
+// OriginalNameGTE applies the GTE predicate on the "original_name" field.
+func OriginalNameGTE(v string) predicate.Image {
+	return predicate.Image(sql.FieldGTE(FieldOriginalName, v))
+}
+
+// OriginalNameLT applies the LT predicate on the "original_name" field.
+func OriginalNameLT(v string) predicate.Image {
+	return predicate.Image(sql.FieldLT(FieldOriginalName, v))
+}
+
+// OriginalNameLTE applies the LTE predicate on the "original_name" field.
+func OriginalNameLTE(v string) predicate.Image {
+	return predicate.Image(sql.FieldLTE(FieldOriginalName, v))
+}
+
+// OriginalNameContains applies the Contains predicate on the "original_name" field.
+func OriginalNameContains(v string) predicate.Image {
+	return predicate.Image(sql.FieldContains(FieldOriginalName, v))
+}
+
+// OriginalNameHasPrefix applies the HasPrefix predicate on the "original_name" field.
+func OriginalNameHasPrefix(v string) predicate.Image {
+	return predicate.Image(sql.FieldHasPrefix(FieldOriginalName, v))
+}
+
+// OriginalNameHasSuffix applies the HasSuffix predicate on the "original_name" field.
+func OriginalNameHasSuffix(v string) predicate.Image {
+	return predicate.Image(sql.FieldHasSuffix(FieldOriginalName, v))
+}
+
+// OriginalNameEqualFold applies the EqualFold predicate on the "original_name" field.
+func OriginalNameEqualFold(v string) predicate.Image {
+	return predicate.Image(sql.FieldEqualFold(FieldOriginalName, v))
+}
+
+// OriginalNameContainsFold applies the ContainsFold predicate on the "original_name" field.
+func OriginalNameContainsFold(v string) predicate.Image {
+	return predicate.Image(sql.FieldContainsFold(FieldOriginalName, v))
 }
 
 // TypeEQ applies the EQ predicate on the "type" field.
@@ -244,6 +324,86 @@ func NoteEqualFold(v string) predicate.Image {
 // NoteContainsFold applies the ContainsFold predicate on the "note" field.
 func NoteContainsFold(v string) predicate.Image {
 	return predicate.Image(sql.FieldContainsFold(FieldNote, v))
+}
+
+// DimentionWidthEQ applies the EQ predicate on the "dimention_width" field.
+func DimentionWidthEQ(v int) predicate.Image {
+	return predicate.Image(sql.FieldEQ(FieldDimentionWidth, v))
+}
+
+// DimentionWidthNEQ applies the NEQ predicate on the "dimention_width" field.
+func DimentionWidthNEQ(v int) predicate.Image {
+	return predicate.Image(sql.FieldNEQ(FieldDimentionWidth, v))
+}
+
+// DimentionWidthIn applies the In predicate on the "dimention_width" field.
+func DimentionWidthIn(vs ...int) predicate.Image {
+	return predicate.Image(sql.FieldIn(FieldDimentionWidth, vs...))
+}
+
+// DimentionWidthNotIn applies the NotIn predicate on the "dimention_width" field.
+func DimentionWidthNotIn(vs ...int) predicate.Image {
+	return predicate.Image(sql.FieldNotIn(FieldDimentionWidth, vs...))
+}
+
+// DimentionWidthGT applies the GT predicate on the "dimention_width" field.
+func DimentionWidthGT(v int) predicate.Image {
+	return predicate.Image(sql.FieldGT(FieldDimentionWidth, v))
+}
+
+// DimentionWidthGTE applies the GTE predicate on the "dimention_width" field.
+func DimentionWidthGTE(v int) predicate.Image {
+	return predicate.Image(sql.FieldGTE(FieldDimentionWidth, v))
+}
+
+// DimentionWidthLT applies the LT predicate on the "dimention_width" field.
+func DimentionWidthLT(v int) predicate.Image {
+	return predicate.Image(sql.FieldLT(FieldDimentionWidth, v))
+}
+
+// DimentionWidthLTE applies the LTE predicate on the "dimention_width" field.
+func DimentionWidthLTE(v int) predicate.Image {
+	return predicate.Image(sql.FieldLTE(FieldDimentionWidth, v))
+}
+
+// DimentionHeightEQ applies the EQ predicate on the "dimention_height" field.
+func DimentionHeightEQ(v int) predicate.Image {
+	return predicate.Image(sql.FieldEQ(FieldDimentionHeight, v))
+}
+
+// DimentionHeightNEQ applies the NEQ predicate on the "dimention_height" field.
+func DimentionHeightNEQ(v int) predicate.Image {
+	return predicate.Image(sql.FieldNEQ(FieldDimentionHeight, v))
+}
+
+// DimentionHeightIn applies the In predicate on the "dimention_height" field.
+func DimentionHeightIn(vs ...int) predicate.Image {
+	return predicate.Image(sql.FieldIn(FieldDimentionHeight, vs...))
+}
+
+// DimentionHeightNotIn applies the NotIn predicate on the "dimention_height" field.
+func DimentionHeightNotIn(vs ...int) predicate.Image {
+	return predicate.Image(sql.FieldNotIn(FieldDimentionHeight, vs...))
+}
+
+// DimentionHeightGT applies the GT predicate on the "dimention_height" field.
+func DimentionHeightGT(v int) predicate.Image {
+	return predicate.Image(sql.FieldGT(FieldDimentionHeight, v))
+}
+
+// DimentionHeightGTE applies the GTE predicate on the "dimention_height" field.
+func DimentionHeightGTE(v int) predicate.Image {
+	return predicate.Image(sql.FieldGTE(FieldDimentionHeight, v))
+}
+
+// DimentionHeightLT applies the LT predicate on the "dimention_height" field.
+func DimentionHeightLT(v int) predicate.Image {
+	return predicate.Image(sql.FieldLT(FieldDimentionHeight, v))
+}
+
+// DimentionHeightLTE applies the LTE predicate on the "dimention_height" field.
+func DimentionHeightLTE(v int) predicate.Image {
+	return predicate.Image(sql.FieldLTE(FieldDimentionHeight, v))
 }
 
 // SizeBitsEQ applies the EQ predicate on the "size_bits" field.
@@ -439,6 +599,29 @@ func HasReleaseWith(preds ...predicate.Release) predicate.Image {
 	})
 }
 
+// HasArtist applies the HasEdge predicate on the "artist" edge.
+func HasArtist() predicate.Image {
+	return predicate.Image(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, true, ArtistTable, ArtistColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasArtistWith applies the HasEdge predicate on the "artist" edge with a given conditions (other predicates).
+func HasArtistWith(preds ...predicate.Artist) predicate.Image {
+	return predicate.Image(func(s *sql.Selector) {
+		step := newArtistStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
 // HasUploader applies the HasEdge predicate on the "uploader" edge.
 func HasUploader() predicate.Image {
 	return predicate.Image(func(s *sql.Selector) {
@@ -454,6 +637,29 @@ func HasUploader() predicate.Image {
 func HasUploaderWith(preds ...predicate.User) predicate.Image {
 	return predicate.Image(func(s *sql.Selector) {
 		step := newUploaderStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasProccesedImage applies the HasEdge predicate on the "proccesed_image" edge.
+func HasProccesedImage() predicate.Image {
+	return predicate.Image(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, ProccesedImageTable, ProccesedImageColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasProccesedImageWith applies the HasEdge predicate on the "proccesed_image" edge with a given conditions (other predicates).
+func HasProccesedImageWith(preds ...predicate.ProcessedImage) predicate.Image {
+	return predicate.Image(func(s *sql.Selector) {
+		step := newProccesedImageStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)

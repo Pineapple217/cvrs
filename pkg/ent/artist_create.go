@@ -6,10 +6,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/Pineapple217/cvrs/pkg/ent/artist"
+	"github.com/Pineapple217/cvrs/pkg/ent/image"
 	"github.com/Pineapple217/cvrs/pkg/ent/release"
 	"github.com/Pineapple217/cvrs/pkg/ent/track"
 	"github.com/Pineapple217/cvrs/pkg/pid"
@@ -25,6 +27,48 @@ type ArtistCreate struct {
 // SetName sets the "name" field.
 func (ac *ArtistCreate) SetName(s string) *ArtistCreate {
 	ac.mutation.SetName(s)
+	return ac
+}
+
+// SetCreatedAt sets the "created_at" field.
+func (ac *ArtistCreate) SetCreatedAt(t time.Time) *ArtistCreate {
+	ac.mutation.SetCreatedAt(t)
+	return ac
+}
+
+// SetNillableCreatedAt sets the "created_at" field if the given value is not nil.
+func (ac *ArtistCreate) SetNillableCreatedAt(t *time.Time) *ArtistCreate {
+	if t != nil {
+		ac.SetCreatedAt(*t)
+	}
+	return ac
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (ac *ArtistCreate) SetUpdatedAt(t time.Time) *ArtistCreate {
+	ac.mutation.SetUpdatedAt(t)
+	return ac
+}
+
+// SetNillableUpdatedAt sets the "updated_at" field if the given value is not nil.
+func (ac *ArtistCreate) SetNillableUpdatedAt(t *time.Time) *ArtistCreate {
+	if t != nil {
+		ac.SetUpdatedAt(*t)
+	}
+	return ac
+}
+
+// SetDeletedAt sets the "deleted_at" field.
+func (ac *ArtistCreate) SetDeletedAt(t time.Time) *ArtistCreate {
+	ac.mutation.SetDeletedAt(t)
+	return ac
+}
+
+// SetNillableDeletedAt sets the "deleted_at" field if the given value is not nil.
+func (ac *ArtistCreate) SetNillableDeletedAt(t *time.Time) *ArtistCreate {
+	if t != nil {
+		ac.SetDeletedAt(*t)
+	}
 	return ac
 }
 
@@ -72,6 +116,25 @@ func (ac *ArtistCreate) AddAppearingReleases(r ...*Release) *ArtistCreate {
 	return ac.AddAppearingReleaseIDs(ids...)
 }
 
+// SetImageID sets the "image" edge to the Image entity by ID.
+func (ac *ArtistCreate) SetImageID(id pid.ID) *ArtistCreate {
+	ac.mutation.SetImageID(id)
+	return ac
+}
+
+// SetNillableImageID sets the "image" edge to the Image entity by ID if the given value is not nil.
+func (ac *ArtistCreate) SetNillableImageID(id *pid.ID) *ArtistCreate {
+	if id != nil {
+		ac = ac.SetImageID(*id)
+	}
+	return ac
+}
+
+// SetImage sets the "image" edge to the Image entity.
+func (ac *ArtistCreate) SetImage(i *Image) *ArtistCreate {
+	return ac.SetImageID(i.ID)
+}
+
 // Mutation returns the ArtistMutation object of the builder.
 func (ac *ArtistCreate) Mutation() *ArtistMutation {
 	return ac.mutation
@@ -107,6 +170,14 @@ func (ac *ArtistCreate) ExecX(ctx context.Context) {
 
 // defaults sets the default values of the builder before save.
 func (ac *ArtistCreate) defaults() {
+	if _, ok := ac.mutation.CreatedAt(); !ok {
+		v := artist.DefaultCreatedAt()
+		ac.mutation.SetCreatedAt(v)
+	}
+	if _, ok := ac.mutation.UpdatedAt(); !ok {
+		v := artist.DefaultUpdatedAt()
+		ac.mutation.SetUpdatedAt(v)
+	}
 	if _, ok := ac.mutation.ID(); !ok {
 		v := artist.DefaultID()
 		ac.mutation.SetID(v)
@@ -122,6 +193,12 @@ func (ac *ArtistCreate) check() error {
 		if err := artist.NameValidator(v); err != nil {
 			return &ValidationError{Name: "name", err: fmt.Errorf(`ent: validator failed for field "Artist.name": %w`, err)}
 		}
+	}
+	if _, ok := ac.mutation.CreatedAt(); !ok {
+		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "Artist.created_at"`)}
+	}
+	if _, ok := ac.mutation.UpdatedAt(); !ok {
+		return &ValidationError{Name: "updated_at", err: errors.New(`ent: missing required field "Artist.updated_at"`)}
 	}
 	return nil
 }
@@ -158,6 +235,18 @@ func (ac *ArtistCreate) createSpec() (*Artist, *sqlgraph.CreateSpec) {
 	if value, ok := ac.mutation.Name(); ok {
 		_spec.SetField(artist.FieldName, field.TypeString, value)
 		_node.Name = value
+	}
+	if value, ok := ac.mutation.CreatedAt(); ok {
+		_spec.SetField(artist.FieldCreatedAt, field.TypeTime, value)
+		_node.CreatedAt = value
+	}
+	if value, ok := ac.mutation.UpdatedAt(); ok {
+		_spec.SetField(artist.FieldUpdatedAt, field.TypeTime, value)
+		_node.UpdatedAt = value
+	}
+	if value, ok := ac.mutation.DeletedAt(); ok {
+		_spec.SetField(artist.FieldDeletedAt, field.TypeTime, value)
+		_node.DeletedAt = &value
 	}
 	if nodes := ac.mutation.AppearingTracksIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
@@ -197,6 +286,22 @@ func (ac *ArtistCreate) createSpec() (*Artist, *sqlgraph.CreateSpec) {
 		createE.defaults()
 		_, specE := createE.createSpec()
 		edge.Target.Fields = specE.Fields
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := ac.mutation.ImageIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: false,
+			Table:   artist.ImageTable,
+			Columns: []string{artist.ImageColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(image.FieldID, field.TypeInt64),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec

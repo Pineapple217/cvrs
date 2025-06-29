@@ -7,11 +7,13 @@ import (
 	"os/signal"
 	"runtime/pprof"
 
+	"github.com/Pineapple217/cvrs/pkg/config"
 	"github.com/Pineapple217/cvrs/pkg/database"
 	"github.com/Pineapple217/cvrs/pkg/handler"
 	"github.com/Pineapple217/cvrs/pkg/server"
 	"github.com/Pineapple217/cvrs/pkg/users"
 	"github.com/Pineapple217/cvrs/pkg/util"
+	"github.com/Pineapple217/cvrs/pkg/worker"
 	"github.com/spf13/cobra"
 )
 
@@ -41,8 +43,16 @@ func main() {
 			fmt.Println(banner)
 			os.Stdout.Sync()
 
-			db, err := database.NewDatabase("file:./data/database.db?_fk=1&_journal_mode=WAL")
+			conf, err := config.Load()
+			util.MaybeDie(err, "Failed to laod config")
+
+			db, err := database.NewDatabase(conf.Database)
 			util.MaybeDieErr(err)
+
+			wf := worker.NewWorkforce(conf.Workforce, db)
+			err = wf.Start()
+			util.MaybeDie(err, "Failed to start workforce")
+			defer wf.Stop()
 
 			h := handler.NewHandler(db)
 
@@ -50,13 +60,12 @@ func main() {
 			server.RegisterRoutes(h)
 			server.ApplyMiddleware(true)
 			server.Start()
+			defer server.Stop()
 
 			quit := make(chan os.Signal, 1)
 			signal.Notify(quit, os.Interrupt)
 			<-quit
 			slog.Info("Received an interrupt signal, exiting...")
-
-			server.Stop()
 		},
 	}
 	var rootCmd = &cobra.Command{

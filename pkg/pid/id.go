@@ -72,7 +72,11 @@ func (id ID) Random() uint32 {
 }
 
 func (id ID) String() string {
-	return EncodeBase32(uint64(id))
+	return EncodeBase32(id)
+}
+
+func (id ID) Int() int64 {
+	return int64(id)
 }
 
 // Crockford's Base32 encoding alphabet
@@ -90,7 +94,7 @@ var decodeCrockford = func() map[rune]byte {
 	return m
 }()
 
-func EncodeBase32(val uint64) string {
+func EncodeBase32(val ID) string {
 	buf := [13]byte{'0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0'}
 	i := len(buf)
 	for val > 0 {
@@ -101,7 +105,7 @@ func EncodeBase32(val uint64) string {
 	return string(buf[:])
 }
 
-func DecodeBase32(s string) (uint64, error) {
+func DecodeBase32(s string) (ID, error) {
 	var val uint64
 	for _, c := range s {
 		d, ok := decodeCrockford[c]
@@ -110,7 +114,7 @@ func DecodeBase32(s string) (uint64, error) {
 		}
 		val = val*32 + uint64(d)
 	}
-	return val, nil
+	return ID(val), nil
 }
 
 func (id ID) MarshalJSON() ([]byte, error) {

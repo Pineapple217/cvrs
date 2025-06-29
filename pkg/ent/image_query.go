@@ -4,6 +4,7 @@ package ent
 
 import (
 	"context"
+	"database/sql/driver"
 	"fmt"
 	"math"
 
@@ -11,8 +12,10 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"github.com/Pineapple217/cvrs/pkg/ent/artist"
 	"github.com/Pineapple217/cvrs/pkg/ent/image"
 	"github.com/Pineapple217/cvrs/pkg/ent/predicate"
+	"github.com/Pineapple217/cvrs/pkg/ent/processedimage"
 	"github.com/Pineapple217/cvrs/pkg/ent/release"
 	"github.com/Pineapple217/cvrs/pkg/ent/user"
 	"github.com/Pineapple217/cvrs/pkg/pid"
@@ -21,13 +24,15 @@ import (
 // ImageQuery is the builder for querying Image entities.
 type ImageQuery struct {
 	config
-	ctx          *QueryContext
-	order        []image.OrderOption
-	inters       []Interceptor
-	predicates   []predicate.Image
-	withRelease  *ReleaseQuery
-	withUploader *UserQuery
-	withFKs      bool
+	ctx                *QueryContext
+	order              []image.OrderOption
+	inters             []Interceptor
+	predicates         []predicate.Image
+	withRelease        *ReleaseQuery
+	withArtist         *ArtistQuery
+	withUploader       *UserQuery
+	withProccesedImage *ProcessedImageQuery
+	withFKs            bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -86,6 +91,28 @@ func (iq *ImageQuery) QueryRelease() *ReleaseQuery {
 	return query
 }
 
+// QueryArtist chains the current query on the "artist" edge.
+func (iq *ImageQuery) QueryArtist() *ArtistQuery {
+	query := (&ArtistClient{config: iq.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := iq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := iq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(image.Table, image.FieldID, selector),
+			sqlgraph.To(artist.Table, artist.FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, true, image.ArtistTable, image.ArtistColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(iq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
 // QueryUploader chains the current query on the "uploader" edge.
 func (iq *ImageQuery) QueryUploader() *UserQuery {
 	query := (&UserClient{config: iq.config}).Query()
@@ -101,6 +128,28 @@ func (iq *ImageQuery) QueryUploader() *UserQuery {
 			sqlgraph.From(image.Table, image.FieldID, selector),
 			sqlgraph.To(user.Table, user.FieldID),
 			sqlgraph.Edge(sqlgraph.M2O, true, image.UploaderTable, image.UploaderColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(iq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryProccesedImage chains the current query on the "proccesed_image" edge.
+func (iq *ImageQuery) QueryProccesedImage() *ProcessedImageQuery {
+	query := (&ProcessedImageClient{config: iq.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := iq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := iq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(image.Table, image.FieldID, selector),
+			sqlgraph.To(processedimage.Table, processedimage.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, image.ProccesedImageTable, image.ProccesedImageColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(iq.driver.Dialect(), step)
 		return fromU, nil
@@ -295,13 +344,15 @@ func (iq *ImageQuery) Clone() *ImageQuery {
 		return nil
 	}
 	return &ImageQuery{
-		config:       iq.config,
-		ctx:          iq.ctx.Clone(),
-		order:        append([]image.OrderOption{}, iq.order...),
-		inters:       append([]Interceptor{}, iq.inters...),
-		predicates:   append([]predicate.Image{}, iq.predicates...),
-		withRelease:  iq.withRelease.Clone(),
-		withUploader: iq.withUploader.Clone(),
+		config:             iq.config,
+		ctx:                iq.ctx.Clone(),
+		order:              append([]image.OrderOption{}, iq.order...),
+		inters:             append([]Interceptor{}, iq.inters...),
+		predicates:         append([]predicate.Image{}, iq.predicates...),
+		withRelease:        iq.withRelease.Clone(),
+		withArtist:         iq.withArtist.Clone(),
+		withUploader:       iq.withUploader.Clone(),
+		withProccesedImage: iq.withProccesedImage.Clone(),
 		// clone intermediate query.
 		sql:  iq.sql.Clone(),
 		path: iq.path,
@@ -319,6 +370,17 @@ func (iq *ImageQuery) WithRelease(opts ...func(*ReleaseQuery)) *ImageQuery {
 	return iq
 }
 
+// WithArtist tells the query-builder to eager-load the nodes that are connected to
+// the "artist" edge. The optional arguments are used to configure the query builder of the edge.
+func (iq *ImageQuery) WithArtist(opts ...func(*ArtistQuery)) *ImageQuery {
+	query := (&ArtistClient{config: iq.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	iq.withArtist = query
+	return iq
+}
+
 // WithUploader tells the query-builder to eager-load the nodes that are connected to
 // the "uploader" edge. The optional arguments are used to configure the query builder of the edge.
 func (iq *ImageQuery) WithUploader(opts ...func(*UserQuery)) *ImageQuery {
@@ -327,6 +389,17 @@ func (iq *ImageQuery) WithUploader(opts ...func(*UserQuery)) *ImageQuery {
 		opt(query)
 	}
 	iq.withUploader = query
+	return iq
+}
+
+// WithProccesedImage tells the query-builder to eager-load the nodes that are connected to
+// the "proccesed_image" edge. The optional arguments are used to configure the query builder of the edge.
+func (iq *ImageQuery) WithProccesedImage(opts ...func(*ProcessedImageQuery)) *ImageQuery {
+	query := (&ProcessedImageClient{config: iq.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	iq.withProccesedImage = query
 	return iq
 }
 
@@ -409,12 +482,14 @@ func (iq *ImageQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Image,
 		nodes       = []*Image{}
 		withFKs     = iq.withFKs
 		_spec       = iq.querySpec()
-		loadedTypes = [2]bool{
+		loadedTypes = [4]bool{
 			iq.withRelease != nil,
+			iq.withArtist != nil,
 			iq.withUploader != nil,
+			iq.withProccesedImage != nil,
 		}
 	)
-	if iq.withRelease != nil || iq.withUploader != nil {
+	if iq.withRelease != nil || iq.withArtist != nil || iq.withUploader != nil {
 		withFKs = true
 	}
 	if withFKs {
@@ -444,9 +519,22 @@ func (iq *ImageQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Image,
 			return nil, err
 		}
 	}
+	if query := iq.withArtist; query != nil {
+		if err := iq.loadArtist(ctx, query, nodes, nil,
+			func(n *Image, e *Artist) { n.Edges.Artist = e }); err != nil {
+			return nil, err
+		}
+	}
 	if query := iq.withUploader; query != nil {
 		if err := iq.loadUploader(ctx, query, nodes, nil,
 			func(n *Image, e *User) { n.Edges.Uploader = e }); err != nil {
+			return nil, err
+		}
+	}
+	if query := iq.withProccesedImage; query != nil {
+		if err := iq.loadProccesedImage(ctx, query, nodes,
+			func(n *Image) { n.Edges.ProccesedImage = []*ProcessedImage{} },
+			func(n *Image, e *ProcessedImage) { n.Edges.ProccesedImage = append(n.Edges.ProccesedImage, e) }); err != nil {
 			return nil, err
 		}
 	}
@@ -485,6 +573,38 @@ func (iq *ImageQuery) loadRelease(ctx context.Context, query *ReleaseQuery, node
 	}
 	return nil
 }
+func (iq *ImageQuery) loadArtist(ctx context.Context, query *ArtistQuery, nodes []*Image, init func(*Image), assign func(*Image, *Artist)) error {
+	ids := make([]pid.ID, 0, len(nodes))
+	nodeids := make(map[pid.ID][]*Image)
+	for i := range nodes {
+		if nodes[i].artist_image == nil {
+			continue
+		}
+		fk := *nodes[i].artist_image
+		if _, ok := nodeids[fk]; !ok {
+			ids = append(ids, fk)
+		}
+		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+	query.Where(artist.IDIn(ids...))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		nodes, ok := nodeids[n.ID]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "artist_image" returned %v`, n.ID)
+		}
+		for i := range nodes {
+			assign(nodes[i], n)
+		}
+	}
+	return nil
+}
 func (iq *ImageQuery) loadUploader(ctx context.Context, query *UserQuery, nodes []*Image, init func(*Image), assign func(*Image, *User)) error {
 	ids := make([]pid.ID, 0, len(nodes))
 	nodeids := make(map[pid.ID][]*Image)
@@ -514,6 +634,37 @@ func (iq *ImageQuery) loadUploader(ctx context.Context, query *UserQuery, nodes 
 		for i := range nodes {
 			assign(nodes[i], n)
 		}
+	}
+	return nil
+}
+func (iq *ImageQuery) loadProccesedImage(ctx context.Context, query *ProcessedImageQuery, nodes []*Image, init func(*Image), assign func(*Image, *ProcessedImage)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[pid.ID]*Image)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	query.withFKs = true
+	query.Where(predicate.ProcessedImage(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(image.ProccesedImageColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.image_proccesed_image
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "image_proccesed_image" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "image_proccesed_image" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
 	}
 	return nil
 }

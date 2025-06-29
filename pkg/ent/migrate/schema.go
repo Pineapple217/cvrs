@@ -12,6 +12,9 @@ var (
 	ArtistsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt64, Increment: true},
 		{Name: "name", Type: field.TypeString},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "deleted_at", Type: field.TypeTime, Nullable: true},
 	}
 	// ArtistsTable holds the schema information for the "artists" table.
 	ArtistsTable = &schema.Table{
@@ -23,14 +26,17 @@ var (
 	ImagesColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt64, Increment: true},
 		{Name: "file", Type: field.TypeString},
-		{Name: "type", Type: field.TypeEnum, Enums: []string{"webp", "png", "jpg"}},
+		{Name: "original_name", Type: field.TypeString},
+		{Name: "type", Type: field.TypeEnum, Enums: []string{"WEBP", "PNG", "JPG"}},
 		{Name: "note", Type: field.TypeString, Nullable: true},
-		{Name: "dimentions", Type: field.TypeJSON},
+		{Name: "dimention_width", Type: field.TypeInt},
+		{Name: "dimention_height", Type: field.TypeInt},
 		{Name: "size_bits", Type: field.TypeUint32},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
 		{Name: "deleted_at", Type: field.TypeTime, Nullable: true},
-		{Name: "release_image", Type: field.TypeInt64, Unique: true},
+		{Name: "artist_image", Type: field.TypeInt64, Unique: true, Nullable: true},
+		{Name: "release_image", Type: field.TypeInt64, Unique: true, Nullable: true},
 		{Name: "user_images", Type: field.TypeInt64},
 	}
 	// ImagesTable holds the schema information for the "images" table.
@@ -40,15 +46,46 @@ var (
 		PrimaryKey: []*schema.Column{ImagesColumns[0]},
 		ForeignKeys: []*schema.ForeignKey{
 			{
+				Symbol:     "images_artists_image",
+				Columns:    []*schema.Column{ImagesColumns[11]},
+				RefColumns: []*schema.Column{ArtistsColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
+			{
 				Symbol:     "images_releases_image",
-				Columns:    []*schema.Column{ImagesColumns[9]},
+				Columns:    []*schema.Column{ImagesColumns[12]},
 				RefColumns: []*schema.Column{ReleasesColumns[0]},
-				OnDelete:   schema.NoAction,
+				OnDelete:   schema.SetNull,
 			},
 			{
 				Symbol:     "images_users_images",
-				Columns:    []*schema.Column{ImagesColumns[10]},
+				Columns:    []*schema.Column{ImagesColumns[13]},
 				RefColumns: []*schema.Column{UsersColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+		},
+	}
+	// ProcessedImagesColumns holds the columns for the "processed_images" table.
+	ProcessedImagesColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt64, Increment: true},
+		{Name: "type", Type: field.TypeEnum, Enums: []string{"WEBP", "PNG", "JPG"}},
+		{Name: "dimentions", Type: field.TypeInt},
+		{Name: "size_bits", Type: field.TypeUint32},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "deleted_at", Type: field.TypeTime, Nullable: true},
+		{Name: "image_proccesed_image", Type: field.TypeInt64},
+	}
+	// ProcessedImagesTable holds the schema information for the "processed_images" table.
+	ProcessedImagesTable = &schema.Table{
+		Name:       "processed_images",
+		Columns:    ProcessedImagesColumns,
+		PrimaryKey: []*schema.Column{ProcessedImagesColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "processed_images_images_proccesed_image",
+				Columns:    []*schema.Column{ProcessedImagesColumns[7]},
+				RefColumns: []*schema.Column{ImagesColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
 		},
@@ -91,6 +128,22 @@ var (
 				OnDelete:   schema.NoAction,
 			},
 		},
+	}
+	// TasksColumns holds the columns for the "tasks" table.
+	TasksColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt64, Increment: true},
+		{Name: "type", Type: field.TypeEnum, Enums: []string{"scale_img"}},
+		{Name: "status", Type: field.TypeEnum, Enums: []string{"pending", "working", "error", "done"}, Default: "pending"},
+		{Name: "error", Type: field.TypeString, Nullable: true},
+		{Name: "payload", Type: field.TypeJSON},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+	}
+	// TasksTable holds the schema information for the "tasks" table.
+	TasksTable = &schema.Table{
+		Name:       "tasks",
+		Columns:    TasksColumns,
+		PrimaryKey: []*schema.Column{TasksColumns[0]},
 	}
 	// TracksColumns holds the columns for the "tracks" table.
 	TracksColumns = []*schema.Column{
@@ -157,8 +210,10 @@ var (
 	Tables = []*schema.Table{
 		ArtistsTable,
 		ImagesTable,
+		ProcessedImagesTable,
 		ReleasesTable,
 		ReleaseAppearancesTable,
+		TasksTable,
 		TracksTable,
 		TrackAppearancesTable,
 		UsersTable,
@@ -166,8 +221,10 @@ var (
 )
 
 func init() {
-	ImagesTable.ForeignKeys[0].RefTable = ReleasesTable
-	ImagesTable.ForeignKeys[1].RefTable = UsersTable
+	ImagesTable.ForeignKeys[0].RefTable = ArtistsTable
+	ImagesTable.ForeignKeys[1].RefTable = ReleasesTable
+	ImagesTable.ForeignKeys[2].RefTable = UsersTable
+	ProcessedImagesTable.ForeignKeys[0].RefTable = ImagesTable
 	ReleaseAppearancesTable.ForeignKeys[0].RefTable = ArtistsTable
 	ReleaseAppearancesTable.ForeignKeys[1].RefTable = ReleasesTable
 	TracksTable.ForeignKeys[0].RefTable = ReleasesTable

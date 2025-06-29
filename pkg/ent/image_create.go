@@ -10,7 +10,9 @@ import (
 
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"github.com/Pineapple217/cvrs/pkg/ent/artist"
 	"github.com/Pineapple217/cvrs/pkg/ent/image"
+	"github.com/Pineapple217/cvrs/pkg/ent/processedimage"
 	"github.com/Pineapple217/cvrs/pkg/ent/release"
 	"github.com/Pineapple217/cvrs/pkg/ent/user"
 	"github.com/Pineapple217/cvrs/pkg/pid"
@@ -26,6 +28,12 @@ type ImageCreate struct {
 // SetFile sets the "file" field.
 func (ic *ImageCreate) SetFile(s string) *ImageCreate {
 	ic.mutation.SetFile(s)
+	return ic
+}
+
+// SetOriginalName sets the "original_name" field.
+func (ic *ImageCreate) SetOriginalName(s string) *ImageCreate {
+	ic.mutation.SetOriginalName(s)
 	return ic
 }
 
@@ -49,9 +57,15 @@ func (ic *ImageCreate) SetNillableNote(s *string) *ImageCreate {
 	return ic
 }
 
-// SetDimentions sets the "dimentions" field.
-func (ic *ImageCreate) SetDimentions(i []int) *ImageCreate {
-	ic.mutation.SetDimentions(i)
+// SetDimentionWidth sets the "dimention_width" field.
+func (ic *ImageCreate) SetDimentionWidth(i int) *ImageCreate {
+	ic.mutation.SetDimentionWidth(i)
+	return ic
+}
+
+// SetDimentionHeight sets the "dimention_height" field.
+func (ic *ImageCreate) SetDimentionHeight(i int) *ImageCreate {
+	ic.mutation.SetDimentionHeight(i)
 	return ic
 }
 
@@ -123,9 +137,36 @@ func (ic *ImageCreate) SetReleaseID(id pid.ID) *ImageCreate {
 	return ic
 }
 
+// SetNillableReleaseID sets the "release" edge to the Release entity by ID if the given value is not nil.
+func (ic *ImageCreate) SetNillableReleaseID(id *pid.ID) *ImageCreate {
+	if id != nil {
+		ic = ic.SetReleaseID(*id)
+	}
+	return ic
+}
+
 // SetRelease sets the "release" edge to the Release entity.
 func (ic *ImageCreate) SetRelease(r *Release) *ImageCreate {
 	return ic.SetReleaseID(r.ID)
+}
+
+// SetArtistID sets the "artist" edge to the Artist entity by ID.
+func (ic *ImageCreate) SetArtistID(id pid.ID) *ImageCreate {
+	ic.mutation.SetArtistID(id)
+	return ic
+}
+
+// SetNillableArtistID sets the "artist" edge to the Artist entity by ID if the given value is not nil.
+func (ic *ImageCreate) SetNillableArtistID(id *pid.ID) *ImageCreate {
+	if id != nil {
+		ic = ic.SetArtistID(*id)
+	}
+	return ic
+}
+
+// SetArtist sets the "artist" edge to the Artist entity.
+func (ic *ImageCreate) SetArtist(a *Artist) *ImageCreate {
+	return ic.SetArtistID(a.ID)
 }
 
 // SetUploaderID sets the "uploader" edge to the User entity by ID.
@@ -139,6 +180,21 @@ func (ic *ImageCreate) SetUploader(u *User) *ImageCreate {
 	return ic.SetUploaderID(u.ID)
 }
 
+// AddProccesedImageIDs adds the "proccesed_image" edge to the ProcessedImage entity by IDs.
+func (ic *ImageCreate) AddProccesedImageIDs(ids ...pid.ID) *ImageCreate {
+	ic.mutation.AddProccesedImageIDs(ids...)
+	return ic
+}
+
+// AddProccesedImage adds the "proccesed_image" edges to the ProcessedImage entity.
+func (ic *ImageCreate) AddProccesedImage(p ...*ProcessedImage) *ImageCreate {
+	ids := make([]pid.ID, len(p))
+	for i := range p {
+		ids[i] = p[i].ID
+	}
+	return ic.AddProccesedImageIDs(ids...)
+}
+
 // Mutation returns the ImageMutation object of the builder.
 func (ic *ImageCreate) Mutation() *ImageMutation {
 	return ic.mutation
@@ -146,7 +202,9 @@ func (ic *ImageCreate) Mutation() *ImageMutation {
 
 // Save creates the Image in the database.
 func (ic *ImageCreate) Save(ctx context.Context) (*Image, error) {
-	ic.defaults()
+	if err := ic.defaults(); err != nil {
+		return nil, err
+	}
 	return withHooks(ctx, ic.sqlSave, ic.mutation, ic.hooks)
 }
 
@@ -173,19 +231,29 @@ func (ic *ImageCreate) ExecX(ctx context.Context) {
 }
 
 // defaults sets the default values of the builder before save.
-func (ic *ImageCreate) defaults() {
+func (ic *ImageCreate) defaults() error {
 	if _, ok := ic.mutation.CreatedAt(); !ok {
+		if image.DefaultCreatedAt == nil {
+			return fmt.Errorf("ent: uninitialized image.DefaultCreatedAt (forgotten import ent/runtime?)")
+		}
 		v := image.DefaultCreatedAt()
 		ic.mutation.SetCreatedAt(v)
 	}
 	if _, ok := ic.mutation.UpdatedAt(); !ok {
+		if image.DefaultUpdatedAt == nil {
+			return fmt.Errorf("ent: uninitialized image.DefaultUpdatedAt (forgotten import ent/runtime?)")
+		}
 		v := image.DefaultUpdatedAt()
 		ic.mutation.SetUpdatedAt(v)
 	}
 	if _, ok := ic.mutation.ID(); !ok {
+		if image.DefaultID == nil {
+			return fmt.Errorf("ent: uninitialized image.DefaultID (forgotten import ent/runtime?)")
+		}
 		v := image.DefaultID()
 		ic.mutation.SetID(v)
 	}
+	return nil
 }
 
 // check runs all checks and user-defined validators on the builder.
@@ -198,6 +266,14 @@ func (ic *ImageCreate) check() error {
 			return &ValidationError{Name: "file", err: fmt.Errorf(`ent: validator failed for field "Image.file": %w`, err)}
 		}
 	}
+	if _, ok := ic.mutation.OriginalName(); !ok {
+		return &ValidationError{Name: "original_name", err: errors.New(`ent: missing required field "Image.original_name"`)}
+	}
+	if v, ok := ic.mutation.OriginalName(); ok {
+		if err := image.OriginalNameValidator(v); err != nil {
+			return &ValidationError{Name: "original_name", err: fmt.Errorf(`ent: validator failed for field "Image.original_name": %w`, err)}
+		}
+	}
 	if _, ok := ic.mutation.GetType(); !ok {
 		return &ValidationError{Name: "type", err: errors.New(`ent: missing required field "Image.type"`)}
 	}
@@ -206,8 +282,21 @@ func (ic *ImageCreate) check() error {
 			return &ValidationError{Name: "type", err: fmt.Errorf(`ent: validator failed for field "Image.type": %w`, err)}
 		}
 	}
-	if _, ok := ic.mutation.Dimentions(); !ok {
-		return &ValidationError{Name: "dimentions", err: errors.New(`ent: missing required field "Image.dimentions"`)}
+	if _, ok := ic.mutation.DimentionWidth(); !ok {
+		return &ValidationError{Name: "dimention_width", err: errors.New(`ent: missing required field "Image.dimention_width"`)}
+	}
+	if v, ok := ic.mutation.DimentionWidth(); ok {
+		if err := image.DimentionWidthValidator(v); err != nil {
+			return &ValidationError{Name: "dimention_width", err: fmt.Errorf(`ent: validator failed for field "Image.dimention_width": %w`, err)}
+		}
+	}
+	if _, ok := ic.mutation.DimentionHeight(); !ok {
+		return &ValidationError{Name: "dimention_height", err: errors.New(`ent: missing required field "Image.dimention_height"`)}
+	}
+	if v, ok := ic.mutation.DimentionHeight(); ok {
+		if err := image.DimentionHeightValidator(v); err != nil {
+			return &ValidationError{Name: "dimention_height", err: fmt.Errorf(`ent: validator failed for field "Image.dimention_height": %w`, err)}
+		}
 	}
 	if _, ok := ic.mutation.SizeBits(); !ok {
 		return &ValidationError{Name: "size_bits", err: errors.New(`ent: missing required field "Image.size_bits"`)}
@@ -217,9 +306,6 @@ func (ic *ImageCreate) check() error {
 	}
 	if _, ok := ic.mutation.UpdatedAt(); !ok {
 		return &ValidationError{Name: "updated_at", err: errors.New(`ent: missing required field "Image.updated_at"`)}
-	}
-	if len(ic.mutation.ReleaseIDs()) == 0 {
-		return &ValidationError{Name: "release", err: errors.New(`ent: missing required edge "Image.release"`)}
 	}
 	if len(ic.mutation.UploaderIDs()) == 0 {
 		return &ValidationError{Name: "uploader", err: errors.New(`ent: missing required edge "Image.uploader"`)}
@@ -260,6 +346,10 @@ func (ic *ImageCreate) createSpec() (*Image, *sqlgraph.CreateSpec) {
 		_spec.SetField(image.FieldFile, field.TypeString, value)
 		_node.File = value
 	}
+	if value, ok := ic.mutation.OriginalName(); ok {
+		_spec.SetField(image.FieldOriginalName, field.TypeString, value)
+		_node.OriginalName = value
+	}
 	if value, ok := ic.mutation.GetType(); ok {
 		_spec.SetField(image.FieldType, field.TypeEnum, value)
 		_node.Type = value
@@ -268,9 +358,13 @@ func (ic *ImageCreate) createSpec() (*Image, *sqlgraph.CreateSpec) {
 		_spec.SetField(image.FieldNote, field.TypeString, value)
 		_node.Note = &value
 	}
-	if value, ok := ic.mutation.Dimentions(); ok {
-		_spec.SetField(image.FieldDimentions, field.TypeJSON, value)
-		_node.Dimentions = value
+	if value, ok := ic.mutation.DimentionWidth(); ok {
+		_spec.SetField(image.FieldDimentionWidth, field.TypeInt, value)
+		_node.DimentionWidth = value
+	}
+	if value, ok := ic.mutation.DimentionHeight(); ok {
+		_spec.SetField(image.FieldDimentionHeight, field.TypeInt, value)
+		_node.DimentionHeight = value
 	}
 	if value, ok := ic.mutation.SizeBits(); ok {
 		_spec.SetField(image.FieldSizeBits, field.TypeUint32, value)
@@ -305,6 +399,23 @@ func (ic *ImageCreate) createSpec() (*Image, *sqlgraph.CreateSpec) {
 		_node.release_image = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
+	if nodes := ic.mutation.ArtistIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: true,
+			Table:   image.ArtistTable,
+			Columns: []string{image.ArtistColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(artist.FieldID, field.TypeInt64),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.artist_image = &nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
+	}
 	if nodes := ic.mutation.UploaderIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
@@ -320,6 +431,22 @@ func (ic *ImageCreate) createSpec() (*Image, *sqlgraph.CreateSpec) {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
 		_node.user_images = &nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := ic.mutation.ProccesedImageIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   image.ProccesedImageTable,
+			Columns: []string{image.ProccesedImageColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(processedimage.FieldID, field.TypeInt64),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec

@@ -5,10 +5,12 @@ package ent
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"github.com/Pineapple217/cvrs/pkg/ent/artist"
+	"github.com/Pineapple217/cvrs/pkg/ent/image"
 	"github.com/Pineapple217/cvrs/pkg/pid"
 )
 
@@ -19,6 +21,12 @@ type Artist struct {
 	ID pid.ID `json:"id,omitempty"`
 	// Name holds the value of the "name" field.
 	Name string `json:"name,omitempty"`
+	// CreatedAt holds the value of the "created_at" field.
+	CreatedAt time.Time `json:"created_at,omitzero"`
+	// UpdatedAt holds the value of the "updated_at" field.
+	UpdatedAt time.Time `json:"updated_at,omitzero"`
+	// DeletedAt holds the value of the "deleted_at" field.
+	DeletedAt *time.Time `json:"deleted_at,omitzero"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the ArtistQuery when eager-loading is set.
 	Edges        ArtistEdges `json:"edges"`
@@ -31,13 +39,15 @@ type ArtistEdges struct {
 	AppearingTracks []*Track `json:"appearing_tracks,omitempty"`
 	// AppearingReleases holds the value of the appearing_releases edge.
 	AppearingReleases []*Release `json:"appearing_releases,omitempty"`
+	// Image holds the value of the image edge.
+	Image *Image `json:"image,omitempty"`
 	// TrackAppearance holds the value of the track_appearance edge.
 	TrackAppearance []*TrackAppearance `json:"track_appearance,omitempty"`
 	// ReleaseAppearance holds the value of the release_appearance edge.
 	ReleaseAppearance []*ReleaseAppearance `json:"release_appearance,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [4]bool
+	loadedTypes [5]bool
 }
 
 // AppearingTracksOrErr returns the AppearingTracks value or an error if the edge
@@ -58,10 +68,21 @@ func (e ArtistEdges) AppearingReleasesOrErr() ([]*Release, error) {
 	return nil, &NotLoadedError{edge: "appearing_releases"}
 }
 
+// ImageOrErr returns the Image value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e ArtistEdges) ImageOrErr() (*Image, error) {
+	if e.Image != nil {
+		return e.Image, nil
+	} else if e.loadedTypes[2] {
+		return nil, &NotFoundError{label: image.Label}
+	}
+	return nil, &NotLoadedError{edge: "image"}
+}
+
 // TrackAppearanceOrErr returns the TrackAppearance value or an error if the edge
 // was not loaded in eager-loading.
 func (e ArtistEdges) TrackAppearanceOrErr() ([]*TrackAppearance, error) {
-	if e.loadedTypes[2] {
+	if e.loadedTypes[3] {
 		return e.TrackAppearance, nil
 	}
 	return nil, &NotLoadedError{edge: "track_appearance"}
@@ -70,7 +91,7 @@ func (e ArtistEdges) TrackAppearanceOrErr() ([]*TrackAppearance, error) {
 // ReleaseAppearanceOrErr returns the ReleaseAppearance value or an error if the edge
 // was not loaded in eager-loading.
 func (e ArtistEdges) ReleaseAppearanceOrErr() ([]*ReleaseAppearance, error) {
-	if e.loadedTypes[3] {
+	if e.loadedTypes[4] {
 		return e.ReleaseAppearance, nil
 	}
 	return nil, &NotLoadedError{edge: "release_appearance"}
@@ -85,6 +106,8 @@ func (*Artist) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullInt64)
 		case artist.FieldName:
 			values[i] = new(sql.NullString)
+		case artist.FieldCreatedAt, artist.FieldUpdatedAt, artist.FieldDeletedAt:
+			values[i] = new(sql.NullTime)
 		default:
 			values[i] = new(sql.UnknownType)
 		}
@@ -112,6 +135,25 @@ func (a *Artist) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				a.Name = value.String
 			}
+		case artist.FieldCreatedAt:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field created_at", values[i])
+			} else if value.Valid {
+				a.CreatedAt = value.Time
+			}
+		case artist.FieldUpdatedAt:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field updated_at", values[i])
+			} else if value.Valid {
+				a.UpdatedAt = value.Time
+			}
+		case artist.FieldDeletedAt:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field deleted_at", values[i])
+			} else if value.Valid {
+				a.DeletedAt = new(time.Time)
+				*a.DeletedAt = value.Time
+			}
 		default:
 			a.selectValues.Set(columns[i], values[i])
 		}
@@ -133,6 +175,11 @@ func (a *Artist) QueryAppearingTracks() *TrackQuery {
 // QueryAppearingReleases queries the "appearing_releases" edge of the Artist entity.
 func (a *Artist) QueryAppearingReleases() *ReleaseQuery {
 	return NewArtistClient(a.config).QueryAppearingReleases(a)
+}
+
+// QueryImage queries the "image" edge of the Artist entity.
+func (a *Artist) QueryImage() *ImageQuery {
+	return NewArtistClient(a.config).QueryImage(a)
 }
 
 // QueryTrackAppearance queries the "track_appearance" edge of the Artist entity.
@@ -170,6 +217,17 @@ func (a *Artist) String() string {
 	builder.WriteString(fmt.Sprintf("id=%v, ", a.ID))
 	builder.WriteString("name=")
 	builder.WriteString(a.Name)
+	builder.WriteString(", ")
+	builder.WriteString("created_at=")
+	builder.WriteString(a.CreatedAt.Format(time.ANSIC))
+	builder.WriteString(", ")
+	builder.WriteString("updated_at=")
+	builder.WriteString(a.UpdatedAt.Format(time.ANSIC))
+	builder.WriteString(", ")
+	if v := a.DeletedAt; v != nil {
+		builder.WriteString("deleted_at=")
+		builder.WriteString(v.Format(time.ANSIC))
+	}
 	builder.WriteByte(')')
 	return builder.String()
 }

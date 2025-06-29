@@ -21,7 +21,7 @@ func TestNewID(t *testing.T) {
 }
 
 func TestEncodeDecodeBase32(t *testing.T) {
-	tests := []uint64{
+	tests := []ID{
 		0,
 		1,
 		42,
@@ -70,7 +70,7 @@ func TestID_String_Decode(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if uint64(id) != decoded {
+	if id != decoded {
 		t.Errorf("mismatch: original %d != decoded %d", id, decoded)
 	}
 }
@@ -117,8 +117,8 @@ func TestBase32SortableByTimestamp(t *testing.T) {
 	v1 := (ts1 << randomBits) | int64(rand)
 	v2 := (ts2 << randomBits) | int64(rand)
 
-	s1 := EncodeBase32(uint64(v1))
-	s2 := EncodeBase32(uint64(v2))
+	s1 := EncodeBase32(ID(v1))
+	s2 := EncodeBase32(ID(v2))
 
 	if len(s1) != 13 || len(s2) != 13 {
 		t.Fatalf("expected both to be length 13, got %d and %d", len(s1), len(s2))
@@ -134,8 +134,8 @@ func TestBase32SortableByRandom(t *testing.T) {
 	vSmall := (ts << randomBits) | int64(1)
 	vBig := (ts << randomBits) | int64(2)
 
-	sSmall := EncodeBase32(uint64(vSmall))
-	sBig := EncodeBase32(uint64(vBig))
+	sSmall := EncodeBase32(ID(vSmall))
+	sBig := EncodeBase32(ID(vBig))
 
 	if strings.Compare(sSmall, sBig) >= 0 {
 		t.Errorf("expected %q < %q when same timestamp but random is smaller", sSmall, sBig)
@@ -145,7 +145,7 @@ func TestBase32SortableByRandom(t *testing.T) {
 func FuzzEncodeDecodeBase32Roundtrip(f *testing.F) {
 	f.Add(uint64(1))
 	f.Add(uint64(123456789))
-	f.Fuzz(func(t *testing.T, val uint64) {
+	f.Fuzz(func(t *testing.T, val ID) {
 		s := EncodeBase32(val)
 		got, err := DecodeBase32(s)
 		if err != nil {
@@ -164,14 +164,14 @@ func BenchmarkNew(b *testing.B) {
 }
 
 func BenchmarkEncodeBase32(b *testing.B) {
-	val := uint64(New())
+	val := New()
 	for i := 0; i < b.N; i++ {
 		_ = EncodeBase32(val)
 	}
 }
 
 func BenchmarkDecodeBase32(b *testing.B) {
-	str := EncodeBase32(uint64(New()))
+	str := EncodeBase32(New())
 	for i := 0; i < b.N; i++ {
 		_, _ = DecodeBase32(str)
 	}

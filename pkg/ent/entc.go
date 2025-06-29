@@ -32,6 +32,9 @@ func addBoolOmitempty() gen.Hook {
 						f.StructTag = strings.Replace(f.StructTag, ",omitempty", "", 1)
 						f.StructTag = strings.Replace(f.StructTag, "omitempty", "", 1)
 					}
+					if gen.Field.IsTime(*f) {
+						f.StructTag = strings.Replace(f.StructTag, "omitempty", "omitzero", 1)
+					}
 				}
 			}
 			return next.Generate(g)

@@ -3,6 +3,8 @@
 package artist
 
 import (
+	"time"
+
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/Pineapple217/cvrs/pkg/pid"
@@ -15,10 +17,18 @@ const (
 	FieldID = "id"
 	// FieldName holds the string denoting the name field in the database.
 	FieldName = "name"
+	// FieldCreatedAt holds the string denoting the created_at field in the database.
+	FieldCreatedAt = "created_at"
+	// FieldUpdatedAt holds the string denoting the updated_at field in the database.
+	FieldUpdatedAt = "updated_at"
+	// FieldDeletedAt holds the string denoting the deleted_at field in the database.
+	FieldDeletedAt = "deleted_at"
 	// EdgeAppearingTracks holds the string denoting the appearing_tracks edge name in mutations.
 	EdgeAppearingTracks = "appearing_tracks"
 	// EdgeAppearingReleases holds the string denoting the appearing_releases edge name in mutations.
 	EdgeAppearingReleases = "appearing_releases"
+	// EdgeImage holds the string denoting the image edge name in mutations.
+	EdgeImage = "image"
 	// EdgeTrackAppearance holds the string denoting the track_appearance edge name in mutations.
 	EdgeTrackAppearance = "track_appearance"
 	// EdgeReleaseAppearance holds the string denoting the release_appearance edge name in mutations.
@@ -35,6 +45,13 @@ const (
 	// AppearingReleasesInverseTable is the table name for the Release entity.
 	// It exists in this package in order to avoid circular dependency with the "release" package.
 	AppearingReleasesInverseTable = "releases"
+	// ImageTable is the table that holds the image relation/edge.
+	ImageTable = "images"
+	// ImageInverseTable is the table name for the Image entity.
+	// It exists in this package in order to avoid circular dependency with the "image" package.
+	ImageInverseTable = "images"
+	// ImageColumn is the table column denoting the image relation/edge.
+	ImageColumn = "artist_image"
 	// TrackAppearanceTable is the table that holds the track_appearance relation/edge.
 	TrackAppearanceTable = "track_appearances"
 	// TrackAppearanceInverseTable is the table name for the TrackAppearance entity.
@@ -55,6 +72,9 @@ const (
 var Columns = []string{
 	FieldID,
 	FieldName,
+	FieldCreatedAt,
+	FieldUpdatedAt,
+	FieldDeletedAt,
 }
 
 var (
@@ -79,6 +99,12 @@ func ValidColumn(column string) bool {
 var (
 	// NameValidator is a validator for the "name" field. It is called by the builders before save.
 	NameValidator func(string) error
+	// DefaultCreatedAt holds the default value on creation for the "created_at" field.
+	DefaultCreatedAt func() time.Time
+	// DefaultUpdatedAt holds the default value on creation for the "updated_at" field.
+	DefaultUpdatedAt func() time.Time
+	// UpdateDefaultUpdatedAt holds the default value on update for the "updated_at" field.
+	UpdateDefaultUpdatedAt func() time.Time
 	// DefaultID holds the default value on creation for the "id" field.
 	DefaultID func() pid.ID
 )
@@ -94,6 +120,21 @@ func ByID(opts ...sql.OrderTermOption) OrderOption {
 // ByName orders the results by the name field.
 func ByName(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldName, opts...).ToFunc()
+}
+
+// ByCreatedAt orders the results by the created_at field.
+func ByCreatedAt(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldCreatedAt, opts...).ToFunc()
+}
+
+// ByUpdatedAt orders the results by the updated_at field.
+func ByUpdatedAt(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldUpdatedAt, opts...).ToFunc()
+}
+
+// ByDeletedAt orders the results by the deleted_at field.
+func ByDeletedAt(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldDeletedAt, opts...).ToFunc()
 }
 
 // ByAppearingTracksCount orders the results by appearing_tracks count.
@@ -121,6 +162,13 @@ func ByAppearingReleasesCount(opts ...sql.OrderTermOption) OrderOption {
 func ByAppearingReleases(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 	return func(s *sql.Selector) {
 		sqlgraph.OrderByNeighborTerms(s, newAppearingReleasesStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
+// ByImageField orders the results by image field.
+func ByImageField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newImageStep(), sql.OrderByField(field, opts...))
 	}
 }
 
@@ -163,6 +211,13 @@ func newAppearingReleasesStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(AppearingReleasesInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.M2M, false, AppearingReleasesTable, AppearingReleasesPrimaryKey...),
+	)
+}
+func newImageStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(ImageInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2O, false, ImageTable, ImageColumn),
 	)
 }
 func newTrackAppearanceStep() *sqlgraph.Step {

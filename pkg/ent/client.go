@@ -18,8 +18,10 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/Pineapple217/cvrs/pkg/ent/artist"
 	"github.com/Pineapple217/cvrs/pkg/ent/image"
+	"github.com/Pineapple217/cvrs/pkg/ent/processedimage"
 	"github.com/Pineapple217/cvrs/pkg/ent/release"
 	"github.com/Pineapple217/cvrs/pkg/ent/releaseappearance"
+	"github.com/Pineapple217/cvrs/pkg/ent/task"
 	"github.com/Pineapple217/cvrs/pkg/ent/track"
 	"github.com/Pineapple217/cvrs/pkg/ent/trackappearance"
 	"github.com/Pineapple217/cvrs/pkg/ent/user"
@@ -36,10 +38,14 @@ type Client struct {
 	Artist *ArtistClient
 	// Image is the client for interacting with the Image builders.
 	Image *ImageClient
+	// ProcessedImage is the client for interacting with the ProcessedImage builders.
+	ProcessedImage *ProcessedImageClient
 	// Release is the client for interacting with the Release builders.
 	Release *ReleaseClient
 	// ReleaseAppearance is the client for interacting with the ReleaseAppearance builders.
 	ReleaseAppearance *ReleaseAppearanceClient
+	// Task is the client for interacting with the Task builders.
+	Task *TaskClient
 	// Track is the client for interacting with the Track builders.
 	Track *TrackClient
 	// TrackAppearance is the client for interacting with the TrackAppearance builders.
@@ -59,8 +65,10 @@ func (c *Client) init() {
 	c.Schema = migrate.NewSchema(c.driver)
 	c.Artist = NewArtistClient(c.config)
 	c.Image = NewImageClient(c.config)
+	c.ProcessedImage = NewProcessedImageClient(c.config)
 	c.Release = NewReleaseClient(c.config)
 	c.ReleaseAppearance = NewReleaseAppearanceClient(c.config)
+	c.Task = NewTaskClient(c.config)
 	c.Track = NewTrackClient(c.config)
 	c.TrackAppearance = NewTrackAppearanceClient(c.config)
 	c.User = NewUserClient(c.config)
@@ -158,8 +166,10 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		config:            cfg,
 		Artist:            NewArtistClient(cfg),
 		Image:             NewImageClient(cfg),
+		ProcessedImage:    NewProcessedImageClient(cfg),
 		Release:           NewReleaseClient(cfg),
 		ReleaseAppearance: NewReleaseAppearanceClient(cfg),
+		Task:              NewTaskClient(cfg),
 		Track:             NewTrackClient(cfg),
 		TrackAppearance:   NewTrackAppearanceClient(cfg),
 		User:              NewUserClient(cfg),
@@ -184,8 +194,10 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		config:            cfg,
 		Artist:            NewArtistClient(cfg),
 		Image:             NewImageClient(cfg),
+		ProcessedImage:    NewProcessedImageClient(cfg),
 		Release:           NewReleaseClient(cfg),
 		ReleaseAppearance: NewReleaseAppearanceClient(cfg),
+		Task:              NewTaskClient(cfg),
 		Track:             NewTrackClient(cfg),
 		TrackAppearance:   NewTrackAppearanceClient(cfg),
 		User:              NewUserClient(cfg),
@@ -218,8 +230,8 @@ func (c *Client) Close() error {
 // In order to add hooks to a specific client, call: `client.Node.Use(...)`.
 func (c *Client) Use(hooks ...Hook) {
 	for _, n := range []interface{ Use(...Hook) }{
-		c.Artist, c.Image, c.Release, c.ReleaseAppearance, c.Track, c.TrackAppearance,
-		c.User,
+		c.Artist, c.Image, c.ProcessedImage, c.Release, c.ReleaseAppearance, c.Task,
+		c.Track, c.TrackAppearance, c.User,
 	} {
 		n.Use(hooks...)
 	}
@@ -229,8 +241,8 @@ func (c *Client) Use(hooks ...Hook) {
 // In order to add interceptors to a specific client, call: `client.Node.Intercept(...)`.
 func (c *Client) Intercept(interceptors ...Interceptor) {
 	for _, n := range []interface{ Intercept(...Interceptor) }{
-		c.Artist, c.Image, c.Release, c.ReleaseAppearance, c.Track, c.TrackAppearance,
-		c.User,
+		c.Artist, c.Image, c.ProcessedImage, c.Release, c.ReleaseAppearance, c.Task,
+		c.Track, c.TrackAppearance, c.User,
 	} {
 		n.Intercept(interceptors...)
 	}
@@ -243,10 +255,14 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.Artist.mutate(ctx, m)
 	case *ImageMutation:
 		return c.Image.mutate(ctx, m)
+	case *ProcessedImageMutation:
+		return c.ProcessedImage.mutate(ctx, m)
 	case *ReleaseMutation:
 		return c.Release.mutate(ctx, m)
 	case *ReleaseAppearanceMutation:
 		return c.ReleaseAppearance.mutate(ctx, m)
+	case *TaskMutation:
+		return c.Task.mutate(ctx, m)
 	case *TrackMutation:
 		return c.Track.mutate(ctx, m)
 	case *TrackAppearanceMutation:
@@ -391,6 +407,22 @@ func (c *ArtistClient) QueryAppearingReleases(a *Artist) *ReleaseQuery {
 			sqlgraph.From(artist.Table, artist.FieldID, id),
 			sqlgraph.To(release.Table, release.FieldID),
 			sqlgraph.Edge(sqlgraph.M2M, false, artist.AppearingReleasesTable, artist.AppearingReleasesPrimaryKey...),
+		)
+		fromV = sqlgraph.Neighbors(a.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryImage queries the image edge of a Artist.
+func (c *ArtistClient) QueryImage(a *Artist) *ImageQuery {
+	query := (&ImageClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := a.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(artist.Table, artist.FieldID, id),
+			sqlgraph.To(image.Table, image.FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, false, artist.ImageTable, artist.ImageColumn),
 		)
 		fromV = sqlgraph.Neighbors(a.driver.Dialect(), step)
 		return fromV, nil
@@ -579,6 +611,22 @@ func (c *ImageClient) QueryRelease(i *Image) *ReleaseQuery {
 	return query
 }
 
+// QueryArtist queries the artist edge of a Image.
+func (c *ImageClient) QueryArtist(i *Image) *ArtistQuery {
+	query := (&ArtistClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := i.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(image.Table, image.FieldID, id),
+			sqlgraph.To(artist.Table, artist.FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, true, image.ArtistTable, image.ArtistColumn),
+		)
+		fromV = sqlgraph.Neighbors(i.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // QueryUploader queries the uploader edge of a Image.
 func (c *ImageClient) QueryUploader(i *Image) *UserQuery {
 	query := (&UserClient{config: c.config}).Query()
@@ -595,9 +643,26 @@ func (c *ImageClient) QueryUploader(i *Image) *UserQuery {
 	return query
 }
 
+// QueryProccesedImage queries the proccesed_image edge of a Image.
+func (c *ImageClient) QueryProccesedImage(i *Image) *ProcessedImageQuery {
+	query := (&ProcessedImageClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := i.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(image.Table, image.FieldID, id),
+			sqlgraph.To(processedimage.Table, processedimage.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, image.ProccesedImageTable, image.ProccesedImageColumn),
+		)
+		fromV = sqlgraph.Neighbors(i.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // Hooks returns the client hooks.
 func (c *ImageClient) Hooks() []Hook {
-	return c.hooks.Image
+	hooks := c.hooks.Image
+	return append(hooks[:len(hooks):len(hooks)], image.Hooks[:]...)
 }
 
 // Interceptors returns the client interceptors.
@@ -617,6 +682,155 @@ func (c *ImageClient) mutate(ctx context.Context, m *ImageMutation) (Value, erro
 		return (&ImageDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
 	default:
 		return nil, fmt.Errorf("ent: unknown Image mutation op: %q", m.Op())
+	}
+}
+
+// ProcessedImageClient is a client for the ProcessedImage schema.
+type ProcessedImageClient struct {
+	config
+}
+
+// NewProcessedImageClient returns a client for the ProcessedImage from the given config.
+func NewProcessedImageClient(c config) *ProcessedImageClient {
+	return &ProcessedImageClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `processedimage.Hooks(f(g(h())))`.
+func (c *ProcessedImageClient) Use(hooks ...Hook) {
+	c.hooks.ProcessedImage = append(c.hooks.ProcessedImage, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `processedimage.Intercept(f(g(h())))`.
+func (c *ProcessedImageClient) Intercept(interceptors ...Interceptor) {
+	c.inters.ProcessedImage = append(c.inters.ProcessedImage, interceptors...)
+}
+
+// Create returns a builder for creating a ProcessedImage entity.
+func (c *ProcessedImageClient) Create() *ProcessedImageCreate {
+	mutation := newProcessedImageMutation(c.config, OpCreate)
+	return &ProcessedImageCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of ProcessedImage entities.
+func (c *ProcessedImageClient) CreateBulk(builders ...*ProcessedImageCreate) *ProcessedImageCreateBulk {
+	return &ProcessedImageCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *ProcessedImageClient) MapCreateBulk(slice any, setFunc func(*ProcessedImageCreate, int)) *ProcessedImageCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &ProcessedImageCreateBulk{err: fmt.Errorf("calling to ProcessedImageClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*ProcessedImageCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &ProcessedImageCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for ProcessedImage.
+func (c *ProcessedImageClient) Update() *ProcessedImageUpdate {
+	mutation := newProcessedImageMutation(c.config, OpUpdate)
+	return &ProcessedImageUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *ProcessedImageClient) UpdateOne(pi *ProcessedImage) *ProcessedImageUpdateOne {
+	mutation := newProcessedImageMutation(c.config, OpUpdateOne, withProcessedImage(pi))
+	return &ProcessedImageUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *ProcessedImageClient) UpdateOneID(id pid.ID) *ProcessedImageUpdateOne {
+	mutation := newProcessedImageMutation(c.config, OpUpdateOne, withProcessedImageID(id))
+	return &ProcessedImageUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for ProcessedImage.
+func (c *ProcessedImageClient) Delete() *ProcessedImageDelete {
+	mutation := newProcessedImageMutation(c.config, OpDelete)
+	return &ProcessedImageDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *ProcessedImageClient) DeleteOne(pi *ProcessedImage) *ProcessedImageDeleteOne {
+	return c.DeleteOneID(pi.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *ProcessedImageClient) DeleteOneID(id pid.ID) *ProcessedImageDeleteOne {
+	builder := c.Delete().Where(processedimage.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &ProcessedImageDeleteOne{builder}
+}
+
+// Query returns a query builder for ProcessedImage.
+func (c *ProcessedImageClient) Query() *ProcessedImageQuery {
+	return &ProcessedImageQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeProcessedImage},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a ProcessedImage entity by its id.
+func (c *ProcessedImageClient) Get(ctx context.Context, id pid.ID) (*ProcessedImage, error) {
+	return c.Query().Where(processedimage.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *ProcessedImageClient) GetX(ctx context.Context, id pid.ID) *ProcessedImage {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QuerySource queries the source edge of a ProcessedImage.
+func (c *ProcessedImageClient) QuerySource(pi *ProcessedImage) *ImageQuery {
+	query := (&ImageClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := pi.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(processedimage.Table, processedimage.FieldID, id),
+			sqlgraph.To(image.Table, image.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, processedimage.SourceTable, processedimage.SourceColumn),
+		)
+		fromV = sqlgraph.Neighbors(pi.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *ProcessedImageClient) Hooks() []Hook {
+	return c.hooks.ProcessedImage
+}
+
+// Interceptors returns the client interceptors.
+func (c *ProcessedImageClient) Interceptors() []Interceptor {
+	return c.inters.ProcessedImage
+}
+
+func (c *ProcessedImageClient) mutate(ctx context.Context, m *ProcessedImageMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&ProcessedImageCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&ProcessedImageUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&ProcessedImageUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&ProcessedImageDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown ProcessedImage mutation op: %q", m.Op())
 	}
 }
 
@@ -930,6 +1144,139 @@ func (c *ReleaseAppearanceClient) mutate(ctx context.Context, m *ReleaseAppearan
 		return (&ReleaseAppearanceDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
 	default:
 		return nil, fmt.Errorf("ent: unknown ReleaseAppearance mutation op: %q", m.Op())
+	}
+}
+
+// TaskClient is a client for the Task schema.
+type TaskClient struct {
+	config
+}
+
+// NewTaskClient returns a client for the Task from the given config.
+func NewTaskClient(c config) *TaskClient {
+	return &TaskClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `task.Hooks(f(g(h())))`.
+func (c *TaskClient) Use(hooks ...Hook) {
+	c.hooks.Task = append(c.hooks.Task, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `task.Intercept(f(g(h())))`.
+func (c *TaskClient) Intercept(interceptors ...Interceptor) {
+	c.inters.Task = append(c.inters.Task, interceptors...)
+}
+
+// Create returns a builder for creating a Task entity.
+func (c *TaskClient) Create() *TaskCreate {
+	mutation := newTaskMutation(c.config, OpCreate)
+	return &TaskCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of Task entities.
+func (c *TaskClient) CreateBulk(builders ...*TaskCreate) *TaskCreateBulk {
+	return &TaskCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *TaskClient) MapCreateBulk(slice any, setFunc func(*TaskCreate, int)) *TaskCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &TaskCreateBulk{err: fmt.Errorf("calling to TaskClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*TaskCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &TaskCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for Task.
+func (c *TaskClient) Update() *TaskUpdate {
+	mutation := newTaskMutation(c.config, OpUpdate)
+	return &TaskUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *TaskClient) UpdateOne(t *Task) *TaskUpdateOne {
+	mutation := newTaskMutation(c.config, OpUpdateOne, withTask(t))
+	return &TaskUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *TaskClient) UpdateOneID(id pid.ID) *TaskUpdateOne {
+	mutation := newTaskMutation(c.config, OpUpdateOne, withTaskID(id))
+	return &TaskUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for Task.
+func (c *TaskClient) Delete() *TaskDelete {
+	mutation := newTaskMutation(c.config, OpDelete)
+	return &TaskDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *TaskClient) DeleteOne(t *Task) *TaskDeleteOne {
+	return c.DeleteOneID(t.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *TaskClient) DeleteOneID(id pid.ID) *TaskDeleteOne {
+	builder := c.Delete().Where(task.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &TaskDeleteOne{builder}
+}
+
+// Query returns a query builder for Task.
+func (c *TaskClient) Query() *TaskQuery {
+	return &TaskQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeTask},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a Task entity by its id.
+func (c *TaskClient) Get(ctx context.Context, id pid.ID) (*Task, error) {
+	return c.Query().Where(task.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *TaskClient) GetX(ctx context.Context, id pid.ID) *Task {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *TaskClient) Hooks() []Hook {
+	return c.hooks.Task
+}
+
+// Interceptors returns the client interceptors.
+func (c *TaskClient) Interceptors() []Interceptor {
+	return c.inters.Task
+}
+
+func (c *TaskClient) mutate(ctx context.Context, m *TaskMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&TaskCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&TaskUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&TaskUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&TaskDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown Task mutation op: %q", m.Op())
 	}
 }
 
@@ -1382,12 +1729,12 @@ func (c *UserClient) mutate(ctx context.Context, m *UserMutation) (Value, error)
 // hooks and interceptors per client, for fast access.
 type (
 	hooks struct {
-		Artist, Image, Release, ReleaseAppearance, Track, TrackAppearance,
-		User []ent.Hook
+		Artist, Image, ProcessedImage, Release, ReleaseAppearance, Task, Track,
+		TrackAppearance, User []ent.Hook
 	}
 	inters struct {
-		Artist, Image, Release, ReleaseAppearance, Track, TrackAppearance,
-		User []ent.Interceptor
+		Artist, Image, ProcessedImage, Release, ReleaseAppearance, Task, Track,
+		TrackAppearance, User []ent.Interceptor
 	}
 )
 

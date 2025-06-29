@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/Pineapple217/cvrs/pkg/pid"
@@ -18,12 +19,16 @@ const (
 	FieldID = "id"
 	// FieldFile holds the string denoting the file field in the database.
 	FieldFile = "file"
+	// FieldOriginalName holds the string denoting the original_name field in the database.
+	FieldOriginalName = "original_name"
 	// FieldType holds the string denoting the type field in the database.
 	FieldType = "type"
 	// FieldNote holds the string denoting the note field in the database.
 	FieldNote = "note"
-	// FieldDimentions holds the string denoting the dimentions field in the database.
-	FieldDimentions = "dimentions"
+	// FieldDimentionWidth holds the string denoting the dimention_width field in the database.
+	FieldDimentionWidth = "dimention_width"
+	// FieldDimentionHeight holds the string denoting the dimention_height field in the database.
+	FieldDimentionHeight = "dimention_height"
 	// FieldSizeBits holds the string denoting the size_bits field in the database.
 	FieldSizeBits = "size_bits"
 	// FieldCreatedAt holds the string denoting the created_at field in the database.
@@ -34,8 +39,12 @@ const (
 	FieldDeletedAt = "deleted_at"
 	// EdgeRelease holds the string denoting the release edge name in mutations.
 	EdgeRelease = "release"
+	// EdgeArtist holds the string denoting the artist edge name in mutations.
+	EdgeArtist = "artist"
 	// EdgeUploader holds the string denoting the uploader edge name in mutations.
 	EdgeUploader = "uploader"
+	// EdgeProccesedImage holds the string denoting the proccesed_image edge name in mutations.
+	EdgeProccesedImage = "proccesed_image"
 	// Table holds the table name of the image in the database.
 	Table = "images"
 	// ReleaseTable is the table that holds the release relation/edge.
@@ -45,6 +54,13 @@ const (
 	ReleaseInverseTable = "releases"
 	// ReleaseColumn is the table column denoting the release relation/edge.
 	ReleaseColumn = "release_image"
+	// ArtistTable is the table that holds the artist relation/edge.
+	ArtistTable = "images"
+	// ArtistInverseTable is the table name for the Artist entity.
+	// It exists in this package in order to avoid circular dependency with the "artist" package.
+	ArtistInverseTable = "artists"
+	// ArtistColumn is the table column denoting the artist relation/edge.
+	ArtistColumn = "artist_image"
 	// UploaderTable is the table that holds the uploader relation/edge.
 	UploaderTable = "images"
 	// UploaderInverseTable is the table name for the User entity.
@@ -52,15 +68,24 @@ const (
 	UploaderInverseTable = "users"
 	// UploaderColumn is the table column denoting the uploader relation/edge.
 	UploaderColumn = "user_images"
+	// ProccesedImageTable is the table that holds the proccesed_image relation/edge.
+	ProccesedImageTable = "processed_images"
+	// ProccesedImageInverseTable is the table name for the ProcessedImage entity.
+	// It exists in this package in order to avoid circular dependency with the "processedimage" package.
+	ProccesedImageInverseTable = "processed_images"
+	// ProccesedImageColumn is the table column denoting the proccesed_image relation/edge.
+	ProccesedImageColumn = "image_proccesed_image"
 )
 
 // Columns holds all SQL columns for image fields.
 var Columns = []string{
 	FieldID,
 	FieldFile,
+	FieldOriginalName,
 	FieldType,
 	FieldNote,
-	FieldDimentions,
+	FieldDimentionWidth,
+	FieldDimentionHeight,
 	FieldSizeBits,
 	FieldCreatedAt,
 	FieldUpdatedAt,
@@ -70,6 +95,7 @@ var Columns = []string{
 // ForeignKeys holds the SQL foreign-keys that are owned by the "images"
 // table and are not defined as standalone fields in the schema.
 var ForeignKeys = []string{
+	"artist_image",
 	"release_image",
 	"user_images",
 }
@@ -89,9 +115,21 @@ func ValidColumn(column string) bool {
 	return false
 }
 
+// Note that the variables below are initialized by the runtime
+// package on the initialization of the application. Therefore,
+// it should be imported in the main as follows:
+//
+//	import _ "github.com/Pineapple217/cvrs/pkg/ent/runtime"
 var (
+	Hooks [1]ent.Hook
 	// FileValidator is a validator for the "file" field. It is called by the builders before save.
 	FileValidator func(string) error
+	// OriginalNameValidator is a validator for the "original_name" field. It is called by the builders before save.
+	OriginalNameValidator func(string) error
+	// DimentionWidthValidator is a validator for the "dimention_width" field. It is called by the builders before save.
+	DimentionWidthValidator func(int) error
+	// DimentionHeightValidator is a validator for the "dimention_height" field. It is called by the builders before save.
+	DimentionHeightValidator func(int) error
 	// DefaultCreatedAt holds the default value on creation for the "created_at" field.
 	DefaultCreatedAt func() time.Time
 	// DefaultUpdatedAt holds the default value on creation for the "updated_at" field.
@@ -107,9 +145,9 @@ type Type string
 
 // Type values.
 const (
-	TypeWebp Type = "webp"
-	TypePng  Type = "png"
-	TypeJpg  Type = "jpg"
+	TypeWEBP Type = "WEBP"
+	TypePNG  Type = "PNG"
+	TypeJPG  Type = "JPG"
 )
 
 func (_type Type) String() string {
@@ -119,7 +157,7 @@ func (_type Type) String() string {
 // TypeValidator is a validator for the "type" field enum values. It is called by the builders before save.
 func TypeValidator(_type Type) error {
 	switch _type {
-	case TypeWebp, TypePng, TypeJpg:
+	case TypeWEBP, TypePNG, TypeJPG:
 		return nil
 	default:
 		return fmt.Errorf("image: invalid enum value for type field: %q", _type)
@@ -139,6 +177,11 @@ func ByFile(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldFile, opts...).ToFunc()
 }
 
+// ByOriginalName orders the results by the original_name field.
+func ByOriginalName(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldOriginalName, opts...).ToFunc()
+}
+
 // ByType orders the results by the type field.
 func ByType(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldType, opts...).ToFunc()
@@ -147,6 +190,16 @@ func ByType(opts ...sql.OrderTermOption) OrderOption {
 // ByNote orders the results by the note field.
 func ByNote(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldNote, opts...).ToFunc()
+}
+
+// ByDimentionWidth orders the results by the dimention_width field.
+func ByDimentionWidth(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldDimentionWidth, opts...).ToFunc()
+}
+
+// ByDimentionHeight orders the results by the dimention_height field.
+func ByDimentionHeight(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldDimentionHeight, opts...).ToFunc()
 }
 
 // BySizeBits orders the results by the size_bits field.
@@ -176,10 +229,31 @@ func ByReleaseField(field string, opts ...sql.OrderTermOption) OrderOption {
 	}
 }
 
+// ByArtistField orders the results by artist field.
+func ByArtistField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newArtistStep(), sql.OrderByField(field, opts...))
+	}
+}
+
 // ByUploaderField orders the results by uploader field.
 func ByUploaderField(field string, opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
 		sqlgraph.OrderByNeighborTerms(s, newUploaderStep(), sql.OrderByField(field, opts...))
+	}
+}
+
+// ByProccesedImageCount orders the results by proccesed_image count.
+func ByProccesedImageCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newProccesedImageStep(), opts...)
+	}
+}
+
+// ByProccesedImage orders the results by proccesed_image terms.
+func ByProccesedImage(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newProccesedImageStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
 func newReleaseStep() *sqlgraph.Step {
@@ -189,10 +263,24 @@ func newReleaseStep() *sqlgraph.Step {
 		sqlgraph.Edge(sqlgraph.O2O, true, ReleaseTable, ReleaseColumn),
 	)
 }
+func newArtistStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(ArtistInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2O, true, ArtistTable, ArtistColumn),
+	)
+}
 func newUploaderStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(UploaderInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.M2O, true, UploaderTable, UploaderColumn),
+	)
+}
+func newProccesedImageStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(ProccesedImageInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, ProccesedImageTable, ProccesedImageColumn),
 	)
 }

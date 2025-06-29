@@ -12,11 +12,17 @@ type Artist func(*sql.Selector)
 // Image is the predicate function for image builders.
 type Image func(*sql.Selector)
 
+// ProcessedImage is the predicate function for processedimage builders.
+type ProcessedImage func(*sql.Selector)
+
 // Release is the predicate function for release builders.
 type Release func(*sql.Selector)
 
 // ReleaseAppearance is the predicate function for releaseappearance builders.
 type ReleaseAppearance func(*sql.Selector)
+
+// Task is the predicate function for task builders.
+type Task func(*sql.Selector)
 
 // Track is the predicate function for track builders.
 type Track func(*sql.Selector)

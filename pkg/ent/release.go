@@ -24,7 +24,7 @@ type Release struct {
 	// Type holds the value of the "type" field.
 	Type release.Type `json:"type,omitempty"`
 	// ReleaseDate holds the value of the "release_date" field.
-	ReleaseDate time.Time `json:"release_date,omitempty"`
+	ReleaseDate time.Time `json:"release_date,omitzero"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the ReleaseQuery when eager-loading is set.
 	Edges        ReleaseEdges `json:"edges"`

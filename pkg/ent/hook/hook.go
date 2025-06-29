@@ -33,6 +33,18 @@ func (f ImageFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.ImageMutation", m)
 }
 
+// The ProcessedImageFunc type is an adapter to allow the use of ordinary
+// function as ProcessedImage mutator.
+type ProcessedImageFunc func(context.Context, *ent.ProcessedImageMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f ProcessedImageFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.ProcessedImageMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.ProcessedImageMutation", m)
+}
+
 // The ReleaseFunc type is an adapter to allow the use of ordinary
 // function as Release mutator.
 type ReleaseFunc func(context.Context, *ent.ReleaseMutation) (ent.Value, error)
@@ -55,6 +67,18 @@ func (f ReleaseAppearanceFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.
 		return f(ctx, mv)
 	}
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.ReleaseAppearanceMutation", m)
+}
+
+// The TaskFunc type is an adapter to allow the use of ordinary
+// function as Task mutator.
+type TaskFunc func(context.Context, *ent.TaskMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f TaskFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.TaskMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.TaskMutation", m)
 }
 
 // The TrackFunc type is an adapter to allow the use of ordinary

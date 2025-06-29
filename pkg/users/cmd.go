@@ -3,6 +3,7 @@ package users
 import (
 	"context"
 
+	"github.com/Pineapple217/cvrs/pkg/config"
 	"github.com/Pineapple217/cvrs/pkg/database"
 	"github.com/spf13/cobra"
 	"golang.org/x/crypto/bcrypt"
@@ -20,7 +21,11 @@ func GetCmd() *cobra.Command {
 		Use:   "add",
 		Short: "Add a new user",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			db, err := database.NewDatabase("file:./data/database.db?_fk=1&_journal_mode=WAL")
+			conf, err := config.Load()
+			if err != nil {
+				return err
+			}
+			db, err := database.NewDatabase(conf.Database)
 			if err != nil {
 				return err
 			}
