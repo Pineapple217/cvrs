@@ -1,7 +1,3 @@
-import { signal } from "@preact/signals";
-import { useAuth } from "../components/AuthProvider";
-import { useEffect } from "preact/hooks";
-
 /**
  * @typedef {Object} User
  * @property {string} id
@@ -10,46 +6,23 @@ import { useEffect } from "preact/hooks";
  * @property {Date} created_at
  */
 
-/** @type {import('@preact/signals').Signal<User[]>} */
-const users = signal([]);
+/**
+ * @returns {Promise<User[]>}
+ */
+export const getUsers = async (token) => {
+  const response = await fetch(__BACKEND_URL__ + "/auth/users", {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  /** @type {Array<Omit<User, "created_at"> & { created_at: string }>} */
+  const raw = await response.json();
 
-/** @type {import('@preact/signals').Signal<boolean>} */
-const loading = signal(false);
+  /** @type {User[]} */
+  const users = raw.map((u) => ({
+    ...u,
+    created_at: new Date(u.created_at),
+  }));
 
-/** @type {import('@preact/signals').Signal<Error|null>} */
-const error = signal(null);
-
-export function useFetchUsers() {
-  const { token } = useAuth();
-
-  useEffect(() => {
-    if (!token) return;
-
-    const fetchUsers = async () => {
-      loading.value = true;
-      error.value = null;
-
-      try {
-        const res = await fetch(__BACKEND_URL__ + "/auth/users", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-        if (!res.ok) throw new Error(`API returned ${res.status}`);
-        // users.value = await res.json();
-        users.value = (await res.json()).map((user) => ({
-          ...user,
-          created_at: new Date(user.created_at),
-        }));
-      } catch (err) {
-        error.value = err;
-      } finally {
-        loading.value = false;
-      }
-    };
-
-    fetchUsers();
-  }, [token]);
-
-  return { users, loading, error };
-}
+  return users;
+};

@@ -1,10 +1,16 @@
-import { useFetchUsers } from "../lib/users";
+import { useQuery } from "@tanstack/react-query";
+import { getUsers } from "../lib/users";
+import { useAuth } from "./AuthProvider";
 
 export function Users() {
-  const { users, loading: userLoading, error } = useFetchUsers();
+  const { token } = useAuth();
+  const { error, data, isFetching } = useQuery({
+    queryKey: ["users"],
+    queryFn: async () => getUsers(token),
+  });
 
-  if (error.value) {
-    return <div class="alert alert-danger">Error: {error.value.message}</div>;
+  if (error) {
+    return <div class="alert alert-danger">Error: {error.message}</div>;
   }
 
   return (
@@ -12,7 +18,7 @@ export function Users() {
       <span>
         <h2>
           Users
-          {userLoading.value && <div class="loader"></div>}
+          {isFetching && <div class="loader"></div>}
         </h2>
       </span>
       <table>
@@ -25,14 +31,15 @@ export function Users() {
           </tr>
         </thead>
         <tbody>
-          {users.value.map((u) => (
-            <tr key={u.id}>
-              <td>{u.id}</td>
-              <td>{u.username}</td>
-              <td>{u.is_admin ? "Admin" : "User"}</td>
-              <td>{u.created_at.toLocaleString()}</td>
-            </tr>
-          ))}
+          {data &&
+            data.map((u) => (
+              <tr key={u.id}>
+                <td>{u.id}</td>
+                <td>{u.username}</td>
+                <td>{u.is_admin ? "Admin" : "User"}</td>
+                <td>{u.created_at.toLocaleString()}</td>
+              </tr>
+            ))}
         </tbody>
       </table>
     </>
