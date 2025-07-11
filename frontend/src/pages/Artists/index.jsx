@@ -6,6 +6,7 @@ import ImageUploader from "../../components/ImgUpload";
 import { ArtistsAdd } from "../../lib/artists";
 import { AuthContext, useAuth } from "../../components/AuthProvider";
 import { useContext } from "preact/hooks";
+import { ArtistsList } from "../../components/ArtistsList";
 
 export function Artists() {
   const ShowCreateModal = useSignal(false);
@@ -18,17 +19,7 @@ export function Artists() {
   return (
     <main>
       <Header />
-      <div class="color-grid">
-        <div style="--color: #FF0000"></div>
-        <div style="--color: #00FF00"></div>
-        <div style="--color: #0000FF"></div>
-        <div style="--color: #FFFF00"></div>
-        <div style="--color: #00FFFF"></div>
-        <div style="--color: #FF00FF"></div>
-        <div style="--color: #C0C0C0"></div>
-        <div style="--color: #808080"></div>
-        <div style="--color: #FFA500"></div>
-      </div>
+      <ArtistsList></ArtistsList>
 
       <Modal visible={ShowCreateModal}>
         <h2>Add Artist</h2>

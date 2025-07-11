@@ -19,7 +19,13 @@ func (server *Server) RegisterRoutes(hdlr *handler.Handler) {
 	api := e.Group("/api")
 
 	img := api.Group("/i")
-	img.Static("", database.IMG_DIR)
+	img.Use(func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) error {
+			c.Response().Header().Add("Cache-Control", "public, max-age=31536000, immutable")
+			return next(c)
+		}
+	})
+	img.Static("/", database.IMG_DIR)
 
 	api.POST("/auth/login", hdlr.Login)
 	api.GET("/auth/users", users.CheckAdmin(hdlr.Users))
