@@ -56,12 +56,12 @@ export function ArtistsList() {
   ) : status === "error" ? (
     <div class="alert alert-danger">Error: {error.message}</div>
   ) : (
-    <>
+    <div class="artist-grid">
       {data.pages.map((artists, i) => (
         <>
           {artists.map((artist) => (
-            <div>
-              <p key={artist.id}>{artist.name}</p>
+            <div key={artist.id}>
+              <span>{artist.name}</span>
               <img
                 src={
                   __BACKEND_URL__ +
@@ -80,6 +80,6 @@ export function ArtistsList() {
         {isFetchingNextPage && <p>Loading more...</p>}
         {!hasNextPage && <p>No more artists</p>}
       </div>
-    </>
+    </div>
   );
 }
