@@ -27,12 +27,17 @@ func (c *Config) SetDefault() {
 	c.Database.SetDefault()
 }
 
+func (c *Config) Validate() {
+	c.Database.Validate()
+}
+
 func Load() (Config, error) {
 	slog.Info("Loading configs")
 	k := koanf.New(".")
 
 	var conf Config
 	conf.SetDefault()
+	conf.Validate()
 
 	err := k.Load(file.Provider("./config.yaml"), yaml.Parser())
 	if err != nil {

@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"os"
 	"os/signal"
+	"path"
 	"runtime/pprof"
 
 	"github.com/Pineapple217/cvrs/pkg/config"
@@ -57,7 +58,7 @@ func main() {
 			h := handler.NewHandler(db)
 
 			server := server.NewServer()
-			server.RegisterRoutes(h)
+			server.RegisterRoutes(h, path.Join(conf.Database.DataLocation, database.IMG_DIR))
 			server.ApplyMiddleware(true)
 			server.Start()
 			defer server.Stop()
@@ -95,6 +96,7 @@ func main() {
 
 	rootCmd.AddCommand(cmdRun)
 	rootCmd.AddCommand(users.GetCmd())
+	rootCmd.AddCommand(database.GetBackupCmd())
 	if err := rootCmd.Execute(); err != nil {
 		slog.Error("Command execution failed", "error", err)
 		os.Exit(1)

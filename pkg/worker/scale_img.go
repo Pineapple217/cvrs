@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"image"
 	"log/slog"
-	"path/filepath"
+	"path"
 
 	"github.com/Pineapple217/cvrs/pkg/database"
 	"github.com/Pineapple217/cvrs/pkg/ent"
@@ -26,7 +26,7 @@ func ScaleImg(t *ent.Task, db *database.Database, ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	img, err := imgio.Open(filepath.Join(database.IMG_DIR, i.File))
+	img, err := imgio.Open(path.Join(db.Conf.DataLocation, database.IMG_DIR, i.File))
 	if err != nil {
 		return err
 	}

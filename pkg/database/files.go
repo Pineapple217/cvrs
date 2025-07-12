@@ -9,7 +9,7 @@ import (
 	"io"
 	"mime/multipart"
 	"os"
-	"path/filepath"
+	"path"
 	"slices"
 	"strings"
 
@@ -27,8 +27,8 @@ import (
 var AllowedMIME = []string{"image/png", "image/jpeg", "image/webp"}
 
 const MAX_IMG_SIZE = 1024 * 1024 * 5 // MB
-const TEMP_DIR = "./data/tmp/"
-const IMG_DIR = "./data/img"
+const TEMP_DIR = "tmp"
+const IMG_DIR = "img"
 
 func (d Database) SaveImg(ctx context.Context, f *multipart.FileHeader, uploader pid.ID) (*ent.Image, error) {
 	var err error
@@ -44,7 +44,7 @@ func (d Database) SaveImg(ctx context.Context, f *multipart.FileHeader, uploader
 	}
 
 	// Write img to temp file
-	tempFile, err := os.CreateTemp(filepath.Clean(TEMP_DIR), "img*")
+	tempFile, err := os.CreateTemp(path.Join(d.Conf.DataLocation, TEMP_DIR), "img*")
 	if err != nil {
 		return nil, fmt.Errorf("failed to create tmp file, %s", err)
 	}
@@ -113,7 +113,7 @@ func (d Database) SaveImg(ctx context.Context, f *multipart.FileHeader, uploader
 		}
 		return nil, err
 	}
-	err = os.Rename(tempFile.Name(), filepath.Join(IMG_DIR, id.String()))
+	err = os.Rename(tempFile.Name(), path.Join(d.Conf.DataLocation, IMG_DIR, id.String()))
 	if err != nil {
 		if rerr := tx.Rollback(); rerr != nil {
 			err = fmt.Errorf("%w: %v", err, rerr)
@@ -145,7 +145,7 @@ func (d Database) SaveImg(ctx context.Context, f *multipart.FileHeader, uploader
 func (d Database) SaveProcedImgs(ctx context.Context, source pid.ID, imgs []image.Image) ([]*ent.ProcessedImage, error) {
 	temps := []*os.File{}
 	for _, i := range imgs {
-		tempFile, err := os.CreateTemp(filepath.Clean(TEMP_DIR), "proc_img*")
+		tempFile, err := os.CreateTemp(path.Join(d.Conf.DataLocation, TEMP_DIR), "proc_img*")
 		if err != nil {
 			return nil, fmt.Errorf("failed to create tmp file, %s", err)
 		}
@@ -200,7 +200,7 @@ func (d Database) SaveProcedImgs(ctx context.Context, source pid.ID, imgs []imag
 	}
 
 	for i, temp := range temps {
-		err = os.Rename(temp.Name(), filepath.Join(IMG_DIR, dbImgs[i].ID.String()))
+		err = os.Rename(temp.Name(), path.Join(d.Conf.DataLocation, IMG_DIR, dbImgs[i].ID.String()))
 		if err != nil {
 			if rerr := tx.Rollback(); rerr != nil {
 				err = fmt.Errorf("%w: %v", err, rerr)
