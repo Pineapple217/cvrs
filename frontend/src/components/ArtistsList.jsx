@@ -3,7 +3,7 @@ import { useAuth } from "./AuthProvider";
 import { getArtists } from "../lib/artists";
 import { useEffect, useRef } from "preact/hooks";
 
-const FETCH_COUNT = 1;
+const FETCH_COUNT = 10;
 
 export function ArtistsList() {
   const { token } = useAuth();
