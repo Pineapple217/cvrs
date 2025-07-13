@@ -25,7 +25,7 @@ export function Header() {
       <nav>
         <ul>
           <li>
-            <a href={payload ? "auth/user" : "/auth/login"}>
+            <a href={payload ? "/auth/user" : "/auth/login"}>
               {payload ? payload.usn : "Login"}
             </a>
           </li>
