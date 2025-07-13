@@ -114,3 +114,38 @@ export const getArtists = async (token, offset, limit) => {
 
   return artists;
 };
+
+/**
+ * @returns {Promise<Artist>}
+ */
+export const getArtist = async (token, id) => {
+  const response = await fetch(__BACKEND_URL__ + `/artist/${id}`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  const artist = await response.json();
+
+  /** @type {Artist} */
+  return {
+    ...artist,
+    created_at: new Date(artist.created_at),
+    updated_at: new Date(artist.updated_at),
+    edges: {
+      image: {
+        ...artist.edges.image,
+        edges: {
+          proccesed_image: artist.edges.image.edges.proccesed_image.map(
+            (img) => ({
+              ...img,
+              created_at: new Date(img.created_at),
+              updated_at: new Date(img.updated_at),
+              edges: img.edges,
+            })
+          ),
+        },
+      },
+    },
+  };
+};

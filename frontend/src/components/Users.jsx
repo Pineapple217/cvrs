@@ -6,6 +6,7 @@ export function Users() {
   const { token } = useAuth();
   const { error, data, isFetching } = useQuery({
     queryKey: ["users"],
+    staleTime: 2 * 60 * 1000,
     queryFn: async () => getUsers(token),
   });
 

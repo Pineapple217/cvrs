@@ -10,6 +10,7 @@ import "./style.css";
 import { User } from "./pages/User/index.jsx";
 import { Artists } from "./pages/Artists/index.jsx";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { Artist } from "./pages/Artist/index.jsx";
 
 const queryClient = new QueryClient();
 
@@ -25,6 +26,7 @@ export function App() {
                 <Route path="/auth/user" component={User} />
                 <Route path="/" component={Home} />
                 <Route path="/artists" component={Artists} />
+                <Route path="/artist/:id" component={Artist} />
                 <Route path="/admin" component={Admin} />
                 <Route default component={NotFound} />
               </Router>

@@ -17,6 +17,7 @@ export function ArtistsList() {
     status,
   } = useInfiniteQuery({
     queryKey: ["artists"],
+    staleTime: 10 * 60 * 1000,
     queryFn: async ({ pageParam }) =>
       getArtists(token, FETCH_COUNT * pageParam, FETCH_COUNT),
     initialPageParam: 0,
@@ -33,7 +34,6 @@ export function ArtistsList() {
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries[0].isIntersecting) {
-          console.log("next page trig");
           fetchNextPage();
         }
       },
@@ -61,17 +61,19 @@ export function ArtistsList() {
         <>
           {artists.map((artist) => (
             <div key={artist.id}>
-              <span>{artist.name}</span>
-              <img
-                src={
-                  __BACKEND_URL__ +
-                  "/i/" +
-                  artist.edges.image.edges.proccesed_image.find(
-                    (a) => a.dimentions === 265
-                  ).id
-                }
-                alt=""
-              />
+              <a href={`/artist/${artist.id}`}>
+                <span>{artist.name}</span>
+                <img
+                  src={
+                    __BACKEND_URL__ +
+                    "/i/" +
+                    artist.edges.image.edges.proccesed_image.find(
+                      (a) => a.dimentions === 265
+                    ).id
+                  }
+                  alt=""
+                />
+              </a>
             </div>
           ))}
         </>
