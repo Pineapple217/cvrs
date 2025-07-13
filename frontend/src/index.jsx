@@ -11,6 +11,7 @@ import { User } from "./pages/User/index.jsx";
 import { Artists } from "./pages/Artists/index.jsx";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Artist } from "./pages/Artist/index.jsx";
+import { LoadingIndicator } from "./components/LoadingIndicator.jsx";
 
 const queryClient = new QueryClient();
 
@@ -20,6 +21,7 @@ export function App() {
       <AuthProvider>
         <QueryClientProvider client={queryClient}>
           <main>
+            <LoadingIndicator />
             <body>
               <Router>
                 <Route path="/auth/login" component={Login} />
