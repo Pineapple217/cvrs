@@ -27,6 +27,12 @@ export function ArtistsList() {
     },
   });
 
+  let len = 50;
+  if (data) {
+    len -= data.pages.reduce((sum, inner) => sum + inner.length, 0);
+  }
+  const placeholders = Array.from({ length: len }, (_, i) => i + 1);
+
   const loadMoreRef = useRef(null);
   useEffect(() => {
     if (!hasNextPage || isFetchingNextPage) return;
@@ -51,46 +57,50 @@ export function ArtistsList() {
     };
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
-  return status === "pending" ? (
-    <div class="alert">Loading</div>
-  ) : status === "error" ? (
-    <div class="alert alert-danger">Error: {error.message}</div>
-  ) : (
+  if (status === "error") {
+    return <div class="alert alert-danger">Error: {error.message}</div>;
+  }
+  return (
     <div class="artist-grid">
-      {data.pages.map((artists, i) => (
-        <>
-          {artists.map((artist) => (
-            <div key={artist.id}>
-              <a href={`/artist/${artist.id}`}>
-                <span>{artist.name}</span>
-                <img
-                  loading="lazy"
-                  src={
-                    __BACKEND_URL__ +
-                    "/i/" +
-                    artist.edges.image.edges.proccesed_image.find(
-                      (a) => a.dimentions === 265
-                    ).id
-                  }
-                  style={{
-                    backgroundImage: `url(${
+      {status === "success" &&
+        data.pages.map((artists, i) => (
+          <>
+            {artists.map((artist) => (
+              <div key={artist.id}>
+                <a href={`/artist/${artist.id}`}>
+                  <span>{artist.name}</span>
+                  <img
+                    loading="lazy"
+                    src={
+                      __BACKEND_URL__ +
+                      "/i/" +
                       artist.edges.image.edges.proccesed_image.find(
                         (a) => a.dimentions === 265
-                      ).thumb
-                    })`,
-                  }}
-                  alt={`picture of ${artist.name}`}
-                />
-                {console.log(artist)}
-              </a>
-            </div>
-          ))}
-        </>
-      ))}
-      <div ref={loadMoreRef} style={{ height: 1 }}>
-        {isFetchingNextPage && <p>Loading more...</p>}
-        {!hasNextPage && <p>No more artists</p>}
+                      ).id
+                    }
+                    style={{
+                      backgroundImage: `url(${
+                        artist.edges.image.edges.proccesed_image.find(
+                          (a) => a.dimentions === 265
+                        ).thumb
+                      })`,
+                    }}
+                    alt={`picture of ${artist.name}`}
+                  />
+                </a>
+              </div>
+            ))}
+          </>
+        ))}
+      <div ref={loadMoreRef} style={{ background: "#0e0e0e" }}>
+        {!hasNextPage && !isFetching && <p>No more artists</p>}
+        <a>{hasNextPage && <span>Loading...</span>}</a>
       </div>
+      {placeholders.map((i) => (
+        <div style={{ background: "#0e0e0e" }}>
+          <a>{hasNextPage && <span>Loading...</span>}</a>
+        </div>
+      ))}
     </div>
   );
 }
