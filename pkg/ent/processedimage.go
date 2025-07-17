@@ -25,6 +25,8 @@ type ProcessedImage struct {
 	Dimentions int `json:"dimentions,omitempty"`
 	// SizeBits holds the value of the "size_bits" field.
 	SizeBits uint32 `json:"size_bits,omitempty"`
+	// Thumb holds the value of the "thumb" field.
+	Thumb []byte `json:"thumb,omitempty"`
 	// CreatedAt holds the value of the "created_at" field.
 	CreatedAt time.Time `json:"created_at,omitzero"`
 	// UpdatedAt holds the value of the "updated_at" field.
@@ -63,6 +65,8 @@ func (*ProcessedImage) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
+		case processedimage.FieldThumb:
+			values[i] = new([]byte)
 		case processedimage.FieldID, processedimage.FieldDimentions, processedimage.FieldSizeBits:
 			values[i] = new(sql.NullInt64)
 		case processedimage.FieldType:
@@ -109,6 +113,12 @@ func (pi *ProcessedImage) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field size_bits", values[i])
 			} else if value.Valid {
 				pi.SizeBits = uint32(value.Int64)
+			}
+		case processedimage.FieldThumb:
+			if value, ok := values[i].(*[]byte); !ok {
+				return fmt.Errorf("unexpected type %T for field thumb", values[i])
+			} else if value != nil {
+				pi.Thumb = *value
 			}
 		case processedimage.FieldCreatedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
@@ -185,6 +195,9 @@ func (pi *ProcessedImage) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("size_bits=")
 	builder.WriteString(fmt.Sprintf("%v", pi.SizeBits))
+	builder.WriteString(", ")
+	builder.WriteString("thumb=")
+	builder.WriteString(fmt.Sprintf("%v", pi.Thumb))
 	builder.WriteString(", ")
 	builder.WriteString("created_at=")
 	builder.WriteString(pi.CreatedAt.Format(time.ANSIC))

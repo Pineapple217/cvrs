@@ -22,6 +22,8 @@ const (
 	FieldDimentions = "dimentions"
 	// FieldSizeBits holds the string denoting the size_bits field in the database.
 	FieldSizeBits = "size_bits"
+	// FieldThumb holds the string denoting the thumb field in the database.
+	FieldThumb = "thumb"
 	// FieldCreatedAt holds the string denoting the created_at field in the database.
 	FieldCreatedAt = "created_at"
 	// FieldUpdatedAt holds the string denoting the updated_at field in the database.
@@ -47,6 +49,7 @@ var Columns = []string{
 	FieldType,
 	FieldDimentions,
 	FieldSizeBits,
+	FieldThumb,
 	FieldCreatedAt,
 	FieldUpdatedAt,
 	FieldDeletedAt,
@@ -76,6 +79,8 @@ func ValidColumn(column string) bool {
 var (
 	// DimentionsValidator is a validator for the "dimentions" field. It is called by the builders before save.
 	DimentionsValidator func(int) error
+	// ThumbValidator is a validator for the "thumb" field. It is called by the builders before save.
+	ThumbValidator func([]byte) error
 	// DefaultCreatedAt holds the default value on creation for the "created_at" field.
 	DefaultCreatedAt func() time.Time
 	// DefaultUpdatedAt holds the default value on creation for the "updated_at" field.

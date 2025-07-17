@@ -22,6 +22,7 @@ import (
 	"github.com/Pineapple217/cvrs/pkg/ent/task"
 	"github.com/Pineapple217/cvrs/pkg/pid"
 	"github.com/chai2010/webp"
+	thumbhash "github.com/galdor/go-thumbhash"
 )
 
 var AllowedMIME = []string{"image/png", "image/jpeg", "image/webp"}
@@ -178,6 +179,7 @@ func (d Database) SaveProcedImgs(ctx context.Context, source pid.ID, imgs []imag
 		imgCreate := tx.ProcessedImage.Create().
 			SetDimentions(imgs[i].Bounds().Dx()).
 			SetID(id).
+			SetThumb(thumbhash.EncodeImage(imgs[i])).
 			SetSizeBits(uint32(info.Size())).
 			SetSourceID(source).
 			SetType(processedimage.TypeWEBP)

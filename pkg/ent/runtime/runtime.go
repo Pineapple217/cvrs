@@ -91,12 +91,16 @@ func init() {
 	processedimageDescDimentions := processedimageFields[1].Descriptor()
 	// processedimage.DimentionsValidator is a validator for the "dimentions" field. It is called by the builders before save.
 	processedimage.DimentionsValidator = processedimageDescDimentions.Validators[0].(func(int) error)
+	// processedimageDescThumb is the schema descriptor for thumb field.
+	processedimageDescThumb := processedimageFields[3].Descriptor()
+	// processedimage.ThumbValidator is a validator for the "thumb" field. It is called by the builders before save.
+	processedimage.ThumbValidator = processedimageDescThumb.Validators[0].(func([]byte) error)
 	// processedimageDescCreatedAt is the schema descriptor for created_at field.
-	processedimageDescCreatedAt := processedimageFields[3].Descriptor()
+	processedimageDescCreatedAt := processedimageFields[4].Descriptor()
 	// processedimage.DefaultCreatedAt holds the default value on creation for the created_at field.
 	processedimage.DefaultCreatedAt = processedimageDescCreatedAt.Default.(func() time.Time)
 	// processedimageDescUpdatedAt is the schema descriptor for updated_at field.
-	processedimageDescUpdatedAt := processedimageFields[4].Descriptor()
+	processedimageDescUpdatedAt := processedimageFields[5].Descriptor()
 	// processedimage.DefaultUpdatedAt holds the default value on creation for the updated_at field.
 	processedimage.DefaultUpdatedAt = processedimageDescUpdatedAt.Default.(func() time.Time)
 	// processedimage.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.

@@ -40,6 +40,12 @@ func (pic *ProcessedImageCreate) SetSizeBits(u uint32) *ProcessedImageCreate {
 	return pic
 }
 
+// SetThumb sets the "thumb" field.
+func (pic *ProcessedImageCreate) SetThumb(b []byte) *ProcessedImageCreate {
+	pic.mutation.SetThumb(b)
+	return pic
+}
+
 // SetCreatedAt sets the "created_at" field.
 func (pic *ProcessedImageCreate) SetCreatedAt(t time.Time) *ProcessedImageCreate {
 	pic.mutation.SetCreatedAt(t)
@@ -177,6 +183,14 @@ func (pic *ProcessedImageCreate) check() error {
 	if _, ok := pic.mutation.SizeBits(); !ok {
 		return &ValidationError{Name: "size_bits", err: errors.New(`ent: missing required field "ProcessedImage.size_bits"`)}
 	}
+	if _, ok := pic.mutation.Thumb(); !ok {
+		return &ValidationError{Name: "thumb", err: errors.New(`ent: missing required field "ProcessedImage.thumb"`)}
+	}
+	if v, ok := pic.mutation.Thumb(); ok {
+		if err := processedimage.ThumbValidator(v); err != nil {
+			return &ValidationError{Name: "thumb", err: fmt.Errorf(`ent: validator failed for field "ProcessedImage.thumb": %w`, err)}
+		}
+	}
 	if _, ok := pic.mutation.CreatedAt(); !ok {
 		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "ProcessedImage.created_at"`)}
 	}
@@ -229,6 +243,10 @@ func (pic *ProcessedImageCreate) createSpec() (*ProcessedImage, *sqlgraph.Create
 	if value, ok := pic.mutation.SizeBits(); ok {
 		_spec.SetField(processedimage.FieldSizeBits, field.TypeUint32, value)
 		_node.SizeBits = value
+	}
+	if value, ok := pic.mutation.Thumb(); ok {
+		_spec.SetField(processedimage.FieldThumb, field.TypeBytes, value)
+		_node.Thumb = value
 	}
 	if value, ok := pic.mutation.CreatedAt(); ok {
 		_spec.SetField(processedimage.FieldCreatedAt, field.TypeTime, value)

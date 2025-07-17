@@ -150,7 +150,7 @@ func (wf *Workforce) Fetcher() {
 				slog.Info("adding tracks to task queue", "count", len(tasks))
 			}
 			for _, task := range tasks {
-				wf.tasks <- task
+				wf.tasks <- task.Unwrap()
 			}
 		}
 	}

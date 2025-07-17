@@ -1,3 +1,5 @@
+import { thumbHashToDataURL } from "thumbhash";
+
 /**
  * @typedef {Object} ArtistsAddData
  * @property {string} name
@@ -49,6 +51,7 @@ export async function ArtistsAdd(d, loading, error, token) {
  * @property {string} type
  * @property {number} dimentions
  * @property {number} size_bits
+ * @property {string} thumb
  * @property {Date} created_at
  * @property {Date} updated_at
  * @property {Object} edges
@@ -102,6 +105,7 @@ export const getArtists = async (token, offset, limit) => {
           proccesed_image: artist.edges.image.edges.proccesed_image.map(
             (img) => ({
               ...img,
+              thumb: thumbHashToDataURL(base64ToArrayLike(img.thumb)),
               created_at: new Date(img.created_at),
               updated_at: new Date(img.updated_at),
               edges: img.edges,
@@ -149,3 +153,13 @@ export const getArtist = async (token, id) => {
     },
   };
 };
+
+function base64ToArrayLike(base64) {
+  const binaryString = atob(base64);
+  const len = binaryString.length;
+  const bytes = new Uint8Array(len);
+  for (let i = 0; i < len; i++) {
+    bytes[i] = binaryString.charCodeAt(i);
+  }
+  return bytes;
+}

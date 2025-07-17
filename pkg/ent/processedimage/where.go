@@ -66,6 +66,11 @@ func SizeBits(v uint32) predicate.ProcessedImage {
 	return predicate.ProcessedImage(sql.FieldEQ(FieldSizeBits, v))
 }
 
+// Thumb applies equality check predicate on the "thumb" field. It's identical to ThumbEQ.
+func Thumb(v []byte) predicate.ProcessedImage {
+	return predicate.ProcessedImage(sql.FieldEQ(FieldThumb, v))
+}
+
 // CreatedAt applies equality check predicate on the "created_at" field. It's identical to CreatedAtEQ.
 func CreatedAt(v time.Time) predicate.ProcessedImage {
 	return predicate.ProcessedImage(sql.FieldEQ(FieldCreatedAt, v))
@@ -179,6 +184,46 @@ func SizeBitsLT(v uint32) predicate.ProcessedImage {
 // SizeBitsLTE applies the LTE predicate on the "size_bits" field.
 func SizeBitsLTE(v uint32) predicate.ProcessedImage {
 	return predicate.ProcessedImage(sql.FieldLTE(FieldSizeBits, v))
+}
+
+// ThumbEQ applies the EQ predicate on the "thumb" field.
+func ThumbEQ(v []byte) predicate.ProcessedImage {
+	return predicate.ProcessedImage(sql.FieldEQ(FieldThumb, v))
+}
+
+// ThumbNEQ applies the NEQ predicate on the "thumb" field.
+func ThumbNEQ(v []byte) predicate.ProcessedImage {
+	return predicate.ProcessedImage(sql.FieldNEQ(FieldThumb, v))
+}
+
+// ThumbIn applies the In predicate on the "thumb" field.
+func ThumbIn(vs ...[]byte) predicate.ProcessedImage {
+	return predicate.ProcessedImage(sql.FieldIn(FieldThumb, vs...))
+}
+
+// ThumbNotIn applies the NotIn predicate on the "thumb" field.
+func ThumbNotIn(vs ...[]byte) predicate.ProcessedImage {
+	return predicate.ProcessedImage(sql.FieldNotIn(FieldThumb, vs...))
+}
+
+// ThumbGT applies the GT predicate on the "thumb" field.
+func ThumbGT(v []byte) predicate.ProcessedImage {
+	return predicate.ProcessedImage(sql.FieldGT(FieldThumb, v))
+}
+
+// ThumbGTE applies the GTE predicate on the "thumb" field.
+func ThumbGTE(v []byte) predicate.ProcessedImage {
+	return predicate.ProcessedImage(sql.FieldGTE(FieldThumb, v))
+}
+
+// ThumbLT applies the LT predicate on the "thumb" field.
+func ThumbLT(v []byte) predicate.ProcessedImage {
+	return predicate.ProcessedImage(sql.FieldLT(FieldThumb, v))
+}
+
+// ThumbLTE applies the LTE predicate on the "thumb" field.
+func ThumbLTE(v []byte) predicate.ProcessedImage {
+	return predicate.ProcessedImage(sql.FieldLTE(FieldThumb, v))
 }
 
 // CreatedAtEQ applies the EQ predicate on the "created_at" field.

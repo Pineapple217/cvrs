@@ -64,6 +64,7 @@ export function ArtistsList() {
               <a href={`/artist/${artist.id}`}>
                 <span>{artist.name}</span>
                 <img
+                  loading="lazy"
                   src={
                     __BACKEND_URL__ +
                     "/i/" +
@@ -71,8 +72,16 @@ export function ArtistsList() {
                       (a) => a.dimentions === 265
                     ).id
                   }
-                  alt=""
+                  style={{
+                    backgroundImage: `url(${
+                      artist.edges.image.edges.proccesed_image.find(
+                        (a) => a.dimentions === 265
+                      ).thumb
+                    })`,
+                  }}
+                  alt={`picture of ${artist.name}`}
                 />
+                {console.log(artist)}
               </a>
             </div>
           ))}

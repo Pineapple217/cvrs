@@ -86,6 +86,12 @@ func (piu *ProcessedImageUpdate) AddSizeBits(u int32) *ProcessedImageUpdate {
 	return piu
 }
 
+// SetThumb sets the "thumb" field.
+func (piu *ProcessedImageUpdate) SetThumb(b []byte) *ProcessedImageUpdate {
+	piu.mutation.SetThumb(b)
+	return piu
+}
+
 // SetUpdatedAt sets the "updated_at" field.
 func (piu *ProcessedImageUpdate) SetUpdatedAt(t time.Time) *ProcessedImageUpdate {
 	piu.mutation.SetUpdatedAt(t)
@@ -182,6 +188,11 @@ func (piu *ProcessedImageUpdate) check() error {
 			return &ValidationError{Name: "dimentions", err: fmt.Errorf(`ent: validator failed for field "ProcessedImage.dimentions": %w`, err)}
 		}
 	}
+	if v, ok := piu.mutation.Thumb(); ok {
+		if err := processedimage.ThumbValidator(v); err != nil {
+			return &ValidationError{Name: "thumb", err: fmt.Errorf(`ent: validator failed for field "ProcessedImage.thumb": %w`, err)}
+		}
+	}
 	if piu.mutation.SourceCleared() && len(piu.mutation.SourceIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "ProcessedImage.source"`)
 	}
@@ -214,6 +225,9 @@ func (piu *ProcessedImageUpdate) sqlSave(ctx context.Context) (n int, err error)
 	}
 	if value, ok := piu.mutation.AddedSizeBits(); ok {
 		_spec.AddField(processedimage.FieldSizeBits, field.TypeUint32, value)
+	}
+	if value, ok := piu.mutation.Thumb(); ok {
+		_spec.SetField(processedimage.FieldThumb, field.TypeBytes, value)
 	}
 	if value, ok := piu.mutation.UpdatedAt(); ok {
 		_spec.SetField(processedimage.FieldUpdatedAt, field.TypeTime, value)
@@ -329,6 +343,12 @@ func (piuo *ProcessedImageUpdateOne) AddSizeBits(u int32) *ProcessedImageUpdateO
 	return piuo
 }
 
+// SetThumb sets the "thumb" field.
+func (piuo *ProcessedImageUpdateOne) SetThumb(b []byte) *ProcessedImageUpdateOne {
+	piuo.mutation.SetThumb(b)
+	return piuo
+}
+
 // SetUpdatedAt sets the "updated_at" field.
 func (piuo *ProcessedImageUpdateOne) SetUpdatedAt(t time.Time) *ProcessedImageUpdateOne {
 	piuo.mutation.SetUpdatedAt(t)
@@ -438,6 +458,11 @@ func (piuo *ProcessedImageUpdateOne) check() error {
 			return &ValidationError{Name: "dimentions", err: fmt.Errorf(`ent: validator failed for field "ProcessedImage.dimentions": %w`, err)}
 		}
 	}
+	if v, ok := piuo.mutation.Thumb(); ok {
+		if err := processedimage.ThumbValidator(v); err != nil {
+			return &ValidationError{Name: "thumb", err: fmt.Errorf(`ent: validator failed for field "ProcessedImage.thumb": %w`, err)}
+		}
+	}
 	if piuo.mutation.SourceCleared() && len(piuo.mutation.SourceIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "ProcessedImage.source"`)
 	}
@@ -487,6 +512,9 @@ func (piuo *ProcessedImageUpdateOne) sqlSave(ctx context.Context) (_node *Proces
 	}
 	if value, ok := piuo.mutation.AddedSizeBits(); ok {
 		_spec.AddField(processedimage.FieldSizeBits, field.TypeUint32, value)
+	}
+	if value, ok := piuo.mutation.Thumb(); ok {
+		_spec.SetField(processedimage.FieldThumb, field.TypeBytes, value)
 	}
 	if value, ok := piuo.mutation.UpdatedAt(); ok {
 		_spec.SetField(processedimage.FieldUpdatedAt, field.TypeTime, value)

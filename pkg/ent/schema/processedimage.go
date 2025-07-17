@@ -25,6 +25,8 @@ func (ProcessedImage) Fields() []ent.Field {
 		field.Int("dimentions").
 			Range(16, 3_000),
 		field.Uint32("size_bits"),
+		field.Bytes("thumb").
+			NotEmpty(),
 		field.Time("created_at").
 			Default(time.Now).
 			Immutable(),

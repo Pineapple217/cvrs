@@ -71,6 +71,7 @@ var (
 		{Name: "type", Type: field.TypeEnum, Enums: []string{"WEBP", "PNG", "JPG"}},
 		{Name: "dimentions", Type: field.TypeInt},
 		{Name: "size_bits", Type: field.TypeUint32},
+		{Name: "thumb", Type: field.TypeBytes},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
 		{Name: "deleted_at", Type: field.TypeTime, Nullable: true},
@@ -84,7 +85,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "processed_images_images_proccesed_image",
-				Columns:    []*schema.Column{ProcessedImagesColumns[7]},
+				Columns:    []*schema.Column{ProcessedImagesColumns[8]},
 				RefColumns: []*schema.Column{ImagesColumns[0]},
 				OnDelete:   schema.NoAction,
 			},

@@ -440,6 +440,7 @@ button.add {
   grid-auto-rows: 1fr;
   gap: 2px;
   background: #000;
+  height: calc(100vh - 70px);
 }
 
 .artist-grid div {
@@ -451,6 +452,9 @@ button.add {
   width: 100%;
   display: block;
   max-width: 100%;
+  aspect-ratio: 1/1;
+  background-repeat: no-repeat;
+  background-size: cover;
 }
 
 .artist-grid span {

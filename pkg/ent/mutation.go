@@ -2038,6 +2038,7 @@ type ProcessedImageMutation struct {
 	adddimentions *int
 	size_bits     *uint32
 	addsize_bits  *int32
+	thumb         *[]byte
 	created_at    *time.Time
 	updated_at    *time.Time
 	deleted_at    *time.Time
@@ -2301,6 +2302,42 @@ func (m *ProcessedImageMutation) ResetSizeBits() {
 	m.addsize_bits = nil
 }
 
+// SetThumb sets the "thumb" field.
+func (m *ProcessedImageMutation) SetThumb(b []byte) {
+	m.thumb = &b
+}
+
+// Thumb returns the value of the "thumb" field in the mutation.
+func (m *ProcessedImageMutation) Thumb() (r []byte, exists bool) {
+	v := m.thumb
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldThumb returns the old "thumb" field's value of the ProcessedImage entity.
+// If the ProcessedImage object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ProcessedImageMutation) OldThumb(ctx context.Context) (v []byte, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldThumb is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldThumb requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldThumb: %w", err)
+	}
+	return oldValue.Thumb, nil
+}
+
+// ResetThumb resets all changes to the "thumb" field.
+func (m *ProcessedImageMutation) ResetThumb() {
+	m.thumb = nil
+}
+
 // SetCreatedAt sets the "created_at" field.
 func (m *ProcessedImageMutation) SetCreatedAt(t time.Time) {
 	m.created_at = &t
@@ -2495,7 +2532,7 @@ func (m *ProcessedImageMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *ProcessedImageMutation) Fields() []string {
-	fields := make([]string, 0, 6)
+	fields := make([]string, 0, 7)
 	if m._type != nil {
 		fields = append(fields, processedimage.FieldType)
 	}
@@ -2504,6 +2541,9 @@ func (m *ProcessedImageMutation) Fields() []string {
 	}
 	if m.size_bits != nil {
 		fields = append(fields, processedimage.FieldSizeBits)
+	}
+	if m.thumb != nil {
+		fields = append(fields, processedimage.FieldThumb)
 	}
 	if m.created_at != nil {
 		fields = append(fields, processedimage.FieldCreatedAt)
@@ -2528,6 +2568,8 @@ func (m *ProcessedImageMutation) Field(name string) (ent.Value, bool) {
 		return m.Dimentions()
 	case processedimage.FieldSizeBits:
 		return m.SizeBits()
+	case processedimage.FieldThumb:
+		return m.Thumb()
 	case processedimage.FieldCreatedAt:
 		return m.CreatedAt()
 	case processedimage.FieldUpdatedAt:
@@ -2549,6 +2591,8 @@ func (m *ProcessedImageMutation) OldField(ctx context.Context, name string) (ent
 		return m.OldDimentions(ctx)
 	case processedimage.FieldSizeBits:
 		return m.OldSizeBits(ctx)
+	case processedimage.FieldThumb:
+		return m.OldThumb(ctx)
 	case processedimage.FieldCreatedAt:
 		return m.OldCreatedAt(ctx)
 	case processedimage.FieldUpdatedAt:
@@ -2584,6 +2628,13 @@ func (m *ProcessedImageMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetSizeBits(v)
+		return nil
+	case processedimage.FieldThumb:
+		v, ok := value.([]byte)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetThumb(v)
 		return nil
 	case processedimage.FieldCreatedAt:
 		v, ok := value.(time.Time)
@@ -2699,6 +2750,9 @@ func (m *ProcessedImageMutation) ResetField(name string) error {
 		return nil
 	case processedimage.FieldSizeBits:
 		m.ResetSizeBits()
+		return nil
+	case processedimage.FieldThumb:
+		m.ResetThumb()
 		return nil
 	case processedimage.FieldCreatedAt:
 		m.ResetCreatedAt()
