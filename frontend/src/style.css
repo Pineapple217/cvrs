@@ -446,6 +446,7 @@ button.add {
 .artist-grid div {
   position: relative;
   color: #fff;
+  aspect-ratio: 1/1;
 }
 
 .artist-grid img {
