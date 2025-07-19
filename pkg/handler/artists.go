@@ -23,10 +23,17 @@ func (h *Handler) ArtistsAdd(c echo.Context) error {
 		return err
 	}
 	var data ArtistsAddRequest
-	// TODO: check length index
+	_, ok := f.Value["json"]
+	if !ok || len(f.Value["json"]) == 0 {
+		return echo.ErrBadRequest
+	}
 	err = json.Unmarshal([]byte(f.Value["json"][0]), &data)
 	if err != nil {
 		return err
+	}
+	_, ok = f.File["img"]
+	if !ok || len(f.File["img"]) == 0 {
+		return echo.ErrBadRequest
 	}
 	img := f.File["img"][0]
 
