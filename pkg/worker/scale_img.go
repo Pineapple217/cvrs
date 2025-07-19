@@ -40,7 +40,7 @@ func ScaleImg(t *ent.Task, db *database.Database, ctx context.Context) error {
 		smallImg := transform.Resize(img, size, size, transform.Lanczos)
 		imgs = append(imgs, smallImg)
 	}
-	dbImgs, err := db.SaveProcedImgs(ctx, i.ID, imgs)
+	dbImgs, err := db.SaveProcessedImgs(ctx, i.ID, imgs)
 	if err != nil {
 		return err
 	}

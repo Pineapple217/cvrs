@@ -143,7 +143,7 @@ func (d Database) SaveImg(ctx context.Context, f *multipart.FileHeader, uploader
 	return DBimg.Unwrap(), nil
 }
 
-func (d Database) SaveProcedImgs(ctx context.Context, source pid.ID, imgs []image.Image) ([]*ent.ProcessedImage, error) {
+func (d Database) SaveProcessedImgs(ctx context.Context, source pid.ID, imgs []image.Image) ([]*ent.ProcessedImage, error) {
 	temps := []*os.File{}
 	for _, i := range imgs {
 		tempFile, err := os.CreateTemp(path.Join(d.Conf.DataLocation, TEMP_DIR), "proc_img*")
@@ -242,6 +242,30 @@ func (d *Database) HardDeleteImg(ctx context.Context, id pid.ID) error {
 	}
 
 	err = tx.Image.DeleteOneID(id).Exec(ctx)
+	if err != nil {
+		if rerr := tx.Rollback(); rerr != nil {
+			err = fmt.Errorf("%w: %v", err, rerr)
+		}
+		return err
+	}
+
+	err = os.Remove(path.Join(d.Conf.DataLocation, IMG_DIR, id.String()))
+	if err != nil {
+		if rerr := tx.Rollback(); rerr != nil {
+			err = fmt.Errorf("%w: %v", err, rerr)
+		}
+		return err
+	}
+	return tx.Commit()
+}
+
+func (d *Database) HardDeleteProcessedImg(ctx context.Context, id pid.ID) error {
+	tx, err := d.Client.BeginTx(ctx, &sql.TxOptions{})
+	if err != nil {
+		return err
+	}
+
+	err = tx.ProcessedImage.DeleteOneID(id).Exec(ctx)
 	if err != nil {
 		if rerr := tx.Rollback(); rerr != nil {
 			err = fmt.Errorf("%w: %v", err, rerr)
