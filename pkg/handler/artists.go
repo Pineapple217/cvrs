@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/Pineapple217/cvrs/pkg/ent"
 	"github.com/Pineapple217/cvrs/pkg/ent/artist"
@@ -43,12 +44,12 @@ func (h *Handler) ArtistsAdd(c echo.Context) error {
 		return err
 	}
 
-	// TODO: img shouldnt be upload if artist name is not valid
 	_, err = h.DB.Client.Artist.Create().
-		SetName(data.Name).
+		SetName(strings.TrimSpace(data.Name)).
 		SetImage(DBimg).
 		Save(c.Request().Context())
 	if err != nil {
+		h.DB.HardDeleteImg(c.Request().Context(), DBimg.ID)
 		return err
 	}
 	return c.NoContent(http.StatusOK)

@@ -234,3 +234,27 @@ func ParseImageType(s string) (entImage.Type, error) {
 		return "", fmt.Errorf("invalid ImageType: %q", s)
 	}
 }
+
+func (d *Database) HardDeleteImg(ctx context.Context, id pid.ID) error {
+	tx, err := d.Client.BeginTx(ctx, &sql.TxOptions{})
+	if err != nil {
+		return err
+	}
+
+	err = tx.Image.DeleteOneID(id).Exec(ctx)
+	if err != nil {
+		if rerr := tx.Rollback(); rerr != nil {
+			err = fmt.Errorf("%w: %v", err, rerr)
+		}
+		return err
+	}
+
+	err = os.Remove(path.Join(d.Conf.DataLocation, IMG_DIR, id.String()))
+	if err != nil {
+		if rerr := tx.Rollback(); rerr != nil {
+			err = fmt.Errorf("%w: %v", err, rerr)
+		}
+		return err
+	}
+	return tx.Commit()
+}
