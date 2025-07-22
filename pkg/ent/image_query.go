@@ -14,6 +14,7 @@ import (
 	"entgo.io/ent/schema/field"
 	"github.com/Pineapple217/cvrs/pkg/ent/artist"
 	"github.com/Pineapple217/cvrs/pkg/ent/image"
+	"github.com/Pineapple217/cvrs/pkg/ent/imagedata"
 	"github.com/Pineapple217/cvrs/pkg/ent/predicate"
 	"github.com/Pineapple217/cvrs/pkg/ent/processedimage"
 	"github.com/Pineapple217/cvrs/pkg/ent/release"
@@ -32,6 +33,7 @@ type ImageQuery struct {
 	withArtist         *ArtistQuery
 	withUploader       *UserQuery
 	withProccesedImage *ProcessedImageQuery
+	withData           *ImageDataQuery
 	withFKs            bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
@@ -150,6 +152,28 @@ func (iq *ImageQuery) QueryProccesedImage() *ProcessedImageQuery {
 			sqlgraph.From(image.Table, image.FieldID, selector),
 			sqlgraph.To(processedimage.Table, processedimage.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, image.ProccesedImageTable, image.ProccesedImageColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(iq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryData chains the current query on the "data" edge.
+func (iq *ImageQuery) QueryData() *ImageDataQuery {
+	query := (&ImageDataClient{config: iq.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := iq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := iq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(image.Table, image.FieldID, selector),
+			sqlgraph.To(imagedata.Table, imagedata.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, false, image.DataTable, image.DataColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(iq.driver.Dialect(), step)
 		return fromU, nil
@@ -353,6 +377,7 @@ func (iq *ImageQuery) Clone() *ImageQuery {
 		withArtist:         iq.withArtist.Clone(),
 		withUploader:       iq.withUploader.Clone(),
 		withProccesedImage: iq.withProccesedImage.Clone(),
+		withData:           iq.withData.Clone(),
 		// clone intermediate query.
 		sql:  iq.sql.Clone(),
 		path: iq.path,
@@ -400,6 +425,17 @@ func (iq *ImageQuery) WithProccesedImage(opts ...func(*ProcessedImageQuery)) *Im
 		opt(query)
 	}
 	iq.withProccesedImage = query
+	return iq
+}
+
+// WithData tells the query-builder to eager-load the nodes that are connected to
+// the "data" edge. The optional arguments are used to configure the query builder of the edge.
+func (iq *ImageQuery) WithData(opts ...func(*ImageDataQuery)) *ImageQuery {
+	query := (&ImageDataClient{config: iq.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	iq.withData = query
 	return iq
 }
 
@@ -482,14 +518,15 @@ func (iq *ImageQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Image,
 		nodes       = []*Image{}
 		withFKs     = iq.withFKs
 		_spec       = iq.querySpec()
-		loadedTypes = [4]bool{
+		loadedTypes = [5]bool{
 			iq.withRelease != nil,
 			iq.withArtist != nil,
 			iq.withUploader != nil,
 			iq.withProccesedImage != nil,
+			iq.withData != nil,
 		}
 	)
-	if iq.withRelease != nil || iq.withArtist != nil || iq.withUploader != nil {
+	if iq.withRelease != nil || iq.withArtist != nil || iq.withUploader != nil || iq.withData != nil {
 		withFKs = true
 	}
 	if withFKs {
@@ -535,6 +572,12 @@ func (iq *ImageQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Image,
 		if err := iq.loadProccesedImage(ctx, query, nodes,
 			func(n *Image) { n.Edges.ProccesedImage = []*ProcessedImage{} },
 			func(n *Image, e *ProcessedImage) { n.Edges.ProccesedImage = append(n.Edges.ProccesedImage, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := iq.withData; query != nil {
+		if err := iq.loadData(ctx, query, nodes, nil,
+			func(n *Image, e *ImageData) { n.Edges.Data = e }); err != nil {
 			return nil, err
 		}
 	}
@@ -665,6 +708,38 @@ func (iq *ImageQuery) loadProccesedImage(ctx context.Context, query *ProcessedIm
 			return fmt.Errorf(`unexpected referenced foreign-key "image_proccesed_image" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
+	}
+	return nil
+}
+func (iq *ImageQuery) loadData(ctx context.Context, query *ImageDataQuery, nodes []*Image, init func(*Image), assign func(*Image, *ImageData)) error {
+	ids := make([]int, 0, len(nodes))
+	nodeids := make(map[int][]*Image)
+	for i := range nodes {
+		if nodes[i].image_data == nil {
+			continue
+		}
+		fk := *nodes[i].image_data
+		if _, ok := nodeids[fk]; !ok {
+			ids = append(ids, fk)
+		}
+		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+	query.Where(imagedata.IDIn(ids...))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		nodes, ok := nodeids[n.ID]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "image_data" returned %v`, n.ID)
+		}
+		for i := range nodes {
+			assign(nodes[i], n)
+		}
 	}
 	return nil
 }

@@ -13,6 +13,7 @@ import (
 	"entgo.io/ent/schema/field"
 	"github.com/Pineapple217/cvrs/pkg/ent/artist"
 	"github.com/Pineapple217/cvrs/pkg/ent/image"
+	"github.com/Pineapple217/cvrs/pkg/ent/imagedata"
 	"github.com/Pineapple217/cvrs/pkg/ent/predicate"
 	"github.com/Pineapple217/cvrs/pkg/ent/processedimage"
 	"github.com/Pineapple217/cvrs/pkg/ent/release"
@@ -248,6 +249,25 @@ func (iu *ImageUpdate) AddProccesedImage(p ...*ProcessedImage) *ImageUpdate {
 	return iu.AddProccesedImageIDs(ids...)
 }
 
+// SetDataID sets the "data" edge to the ImageData entity by ID.
+func (iu *ImageUpdate) SetDataID(id int) *ImageUpdate {
+	iu.mutation.SetDataID(id)
+	return iu
+}
+
+// SetNillableDataID sets the "data" edge to the ImageData entity by ID if the given value is not nil.
+func (iu *ImageUpdate) SetNillableDataID(id *int) *ImageUpdate {
+	if id != nil {
+		iu = iu.SetDataID(*id)
+	}
+	return iu
+}
+
+// SetData sets the "data" edge to the ImageData entity.
+func (iu *ImageUpdate) SetData(i *ImageData) *ImageUpdate {
+	return iu.SetDataID(i.ID)
+}
+
 // Mutation returns the ImageMutation object of the builder.
 func (iu *ImageUpdate) Mutation() *ImageMutation {
 	return iu.mutation
@@ -290,6 +310,12 @@ func (iu *ImageUpdate) RemoveProccesedImage(p ...*ProcessedImage) *ImageUpdate {
 		ids[i] = p[i].ID
 	}
 	return iu.RemoveProccesedImageIDs(ids...)
+}
+
+// ClearData clears the "data" edge to the ImageData entity.
+func (iu *ImageUpdate) ClearData() *ImageUpdate {
+	iu.mutation.ClearData()
+	return iu
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -553,6 +579,35 @@ func (iu *ImageUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
+	if iu.mutation.DataCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: false,
+			Table:   image.DataTable,
+			Columns: []string{image.DataColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(imagedata.FieldID, field.TypeInt),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := iu.mutation.DataIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: false,
+			Table:   image.DataTable,
+			Columns: []string{image.DataColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(imagedata.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
 	if n, err = sqlgraph.UpdateNodes(ctx, iu.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{image.Label}
@@ -788,6 +843,25 @@ func (iuo *ImageUpdateOne) AddProccesedImage(p ...*ProcessedImage) *ImageUpdateO
 	return iuo.AddProccesedImageIDs(ids...)
 }
 
+// SetDataID sets the "data" edge to the ImageData entity by ID.
+func (iuo *ImageUpdateOne) SetDataID(id int) *ImageUpdateOne {
+	iuo.mutation.SetDataID(id)
+	return iuo
+}
+
+// SetNillableDataID sets the "data" edge to the ImageData entity by ID if the given value is not nil.
+func (iuo *ImageUpdateOne) SetNillableDataID(id *int) *ImageUpdateOne {
+	if id != nil {
+		iuo = iuo.SetDataID(*id)
+	}
+	return iuo
+}
+
+// SetData sets the "data" edge to the ImageData entity.
+func (iuo *ImageUpdateOne) SetData(i *ImageData) *ImageUpdateOne {
+	return iuo.SetDataID(i.ID)
+}
+
 // Mutation returns the ImageMutation object of the builder.
 func (iuo *ImageUpdateOne) Mutation() *ImageMutation {
 	return iuo.mutation
@@ -830,6 +904,12 @@ func (iuo *ImageUpdateOne) RemoveProccesedImage(p ...*ProcessedImage) *ImageUpda
 		ids[i] = p[i].ID
 	}
 	return iuo.RemoveProccesedImageIDs(ids...)
+}
+
+// ClearData clears the "data" edge to the ImageData entity.
+func (iuo *ImageUpdateOne) ClearData() *ImageUpdateOne {
+	iuo.mutation.ClearData()
+	return iuo
 }
 
 // Where appends a list predicates to the ImageUpdate builder.
@@ -1116,6 +1196,35 @@ func (iuo *ImageUpdateOne) sqlSave(ctx context.Context) (_node *Image, err error
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(processedimage.FieldID, field.TypeInt64),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if iuo.mutation.DataCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: false,
+			Table:   image.DataTable,
+			Columns: []string{image.DataColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(imagedata.FieldID, field.TypeInt),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := iuo.mutation.DataIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: false,
+			Table:   image.DataTable,
+			Columns: []string{image.DataColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(imagedata.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {

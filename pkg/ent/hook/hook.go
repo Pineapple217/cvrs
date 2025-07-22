@@ -33,6 +33,18 @@ func (f ImageFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.ImageMutation", m)
 }
 
+// The ImageDataFunc type is an adapter to allow the use of ordinary
+// function as ImageData mutator.
+type ImageDataFunc func(context.Context, *ent.ImageDataMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f ImageDataFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.ImageDataMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.ImageDataMutation", m)
+}
+
 // The ProcessedImageFunc type is an adapter to allow the use of ordinary
 // function as ProcessedImage mutator.
 type ProcessedImageFunc func(context.Context, *ent.ProcessedImageMutation) (ent.Value, error)

@@ -18,6 +18,8 @@ type Tx struct {
 	Artist *ArtistClient
 	// Image is the client for interacting with the Image builders.
 	Image *ImageClient
+	// ImageData is the client for interacting with the ImageData builders.
+	ImageData *ImageDataClient
 	// ProcessedImage is the client for interacting with the ProcessedImage builders.
 	ProcessedImage *ProcessedImageClient
 	// Release is the client for interacting with the Release builders.
@@ -165,6 +167,7 @@ func (tx *Tx) Client() *Client {
 func (tx *Tx) init() {
 	tx.Artist = NewArtistClient(tx.config)
 	tx.Image = NewImageClient(tx.config)
+	tx.ImageData = NewImageDataClient(tx.config)
 	tx.ProcessedImage = NewProcessedImageClient(tx.config)
 	tx.Release = NewReleaseClient(tx.config)
 	tx.ReleaseAppearance = NewReleaseAppearanceClient(tx.config)

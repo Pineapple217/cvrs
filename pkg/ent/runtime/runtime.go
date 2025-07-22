@@ -7,6 +7,7 @@ import (
 
 	"github.com/Pineapple217/cvrs/pkg/ent/artist"
 	"github.com/Pineapple217/cvrs/pkg/ent/image"
+	"github.com/Pineapple217/cvrs/pkg/ent/imagedata"
 	"github.com/Pineapple217/cvrs/pkg/ent/processedimage"
 	"github.com/Pineapple217/cvrs/pkg/ent/release"
 	"github.com/Pineapple217/cvrs/pkg/ent/releaseappearance"
@@ -82,6 +83,12 @@ func init() {
 	imageDescID := imageMixinFields0[0].Descriptor()
 	// image.DefaultID holds the default value on creation for the id field.
 	image.DefaultID = imageDescID.Default.(func() pid.ID)
+	imagedataFields := schema.ImageData{}.Fields()
+	_ = imagedataFields
+	// imagedataDescCreatedAt is the schema descriptor for created_at field.
+	imagedataDescCreatedAt := imagedataFields[5].Descriptor()
+	// imagedata.DefaultCreatedAt holds the default value on creation for the created_at field.
+	imagedata.DefaultCreatedAt = imagedataDescCreatedAt.Default.(func() time.Time)
 	processedimageMixin := schema.ProcessedImage{}.Mixin()
 	processedimageMixinFields0 := processedimageMixin[0].Fields()
 	_ = processedimageMixinFields0

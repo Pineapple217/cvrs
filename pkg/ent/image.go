@@ -11,6 +11,7 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"github.com/Pineapple217/cvrs/pkg/ent/artist"
 	"github.com/Pineapple217/cvrs/pkg/ent/image"
+	"github.com/Pineapple217/cvrs/pkg/ent/imagedata"
 	"github.com/Pineapple217/cvrs/pkg/ent/release"
 	"github.com/Pineapple217/cvrs/pkg/ent/user"
 	"github.com/Pineapple217/cvrs/pkg/pid"
@@ -45,6 +46,7 @@ type Image struct {
 	// The values are being populated by the ImageQuery when eager-loading is set.
 	Edges         ImageEdges `json:"edges"`
 	artist_image  *pid.ID
+	image_data    *int
 	release_image *pid.ID
 	user_images   *pid.ID
 	selectValues  sql.SelectValues
@@ -60,9 +62,11 @@ type ImageEdges struct {
 	Uploader *User `json:"uploader,omitempty"`
 	// ProccesedImage holds the value of the proccesed_image edge.
 	ProccesedImage []*ProcessedImage `json:"proccesed_image,omitempty"`
+	// Data holds the value of the data edge.
+	Data *ImageData `json:"data,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [4]bool
+	loadedTypes [5]bool
 }
 
 // ReleaseOrErr returns the Release value or an error if the edge
@@ -107,6 +111,17 @@ func (e ImageEdges) ProccesedImageOrErr() ([]*ProcessedImage, error) {
 	return nil, &NotLoadedError{edge: "proccesed_image"}
 }
 
+// DataOrErr returns the Data value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e ImageEdges) DataOrErr() (*ImageData, error) {
+	if e.Data != nil {
+		return e.Data, nil
+	} else if e.loadedTypes[4] {
+		return nil, &NotFoundError{label: imagedata.Label}
+	}
+	return nil, &NotLoadedError{edge: "data"}
+}
+
 // scanValues returns the types for scanning values from sql.Rows.
 func (*Image) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
@@ -120,9 +135,11 @@ func (*Image) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullTime)
 		case image.ForeignKeys[0]: // artist_image
 			values[i] = new(sql.NullInt64)
-		case image.ForeignKeys[1]: // release_image
+		case image.ForeignKeys[1]: // image_data
 			values[i] = new(sql.NullInt64)
-		case image.ForeignKeys[2]: // user_images
+		case image.ForeignKeys[2]: // release_image
+			values[i] = new(sql.NullInt64)
+		case image.ForeignKeys[3]: // user_images
 			values[i] = new(sql.NullInt64)
 		default:
 			values[i] = new(sql.UnknownType)
@@ -216,12 +233,19 @@ func (i *Image) assignValues(columns []string, values []any) error {
 			}
 		case image.ForeignKeys[1]:
 			if value, ok := values[j].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for edge-field image_data", value)
+			} else if value.Valid {
+				i.image_data = new(int)
+				*i.image_data = int(value.Int64)
+			}
+		case image.ForeignKeys[2]:
+			if value, ok := values[j].(*sql.NullInt64); !ok {
 				return fmt.Errorf("unexpected type %T for field release_image", values[j])
 			} else if value.Valid {
 				i.release_image = new(pid.ID)
 				*i.release_image = pid.ID(value.Int64)
 			}
-		case image.ForeignKeys[2]:
+		case image.ForeignKeys[3]:
 			if value, ok := values[j].(*sql.NullInt64); !ok {
 				return fmt.Errorf("unexpected type %T for field user_images", values[j])
 			} else if value.Valid {
@@ -259,6 +283,11 @@ func (i *Image) QueryUploader() *UserQuery {
 // QueryProccesedImage queries the "proccesed_image" edge of the Image entity.
 func (i *Image) QueryProccesedImage() *ProcessedImageQuery {
 	return NewImageClient(i.config).QueryProccesedImage(i)
+}
+
+// QueryData queries the "data" edge of the Image entity.
+func (i *Image) QueryData() *ImageDataQuery {
+	return NewImageClient(i.config).QueryData(i)
 }
 
 // Update returns a builder for updating this Image.

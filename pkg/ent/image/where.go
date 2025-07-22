@@ -668,6 +668,29 @@ func HasProccesedImageWith(preds ...predicate.ProcessedImage) predicate.Image {
 	})
 }
 
+// HasData applies the HasEdge predicate on the "data" edge.
+func HasData() predicate.Image {
+	return predicate.Image(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, false, DataTable, DataColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasDataWith applies the HasEdge predicate on the "data" edge with a given conditions (other predicates).
+func HasDataWith(preds ...predicate.ImageData) predicate.Image {
+	return predicate.Image(func(s *sql.Selector) {
+		step := newDataStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
 // And groups predicates with the AND operator between them.
 func And(predicates ...predicate.Image) predicate.Image {
 	return predicate.Image(sql.AndPredicates(predicates...))

@@ -36,6 +36,7 @@ var (
 		{Name: "updated_at", Type: field.TypeTime},
 		{Name: "deleted_at", Type: field.TypeTime, Nullable: true},
 		{Name: "artist_image", Type: field.TypeInt64, Unique: true, Nullable: true},
+		{Name: "image_data", Type: field.TypeInt, Nullable: true},
 		{Name: "release_image", Type: field.TypeInt64, Unique: true, Nullable: true},
 		{Name: "user_images", Type: field.TypeInt64},
 	}
@@ -52,18 +53,40 @@ var (
 				OnDelete:   schema.SetNull,
 			},
 			{
-				Symbol:     "images_releases_image",
+				Symbol:     "images_image_data_data",
 				Columns:    []*schema.Column{ImagesColumns[12]},
+				RefColumns: []*schema.Column{ImageDataColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
+			{
+				Symbol:     "images_releases_image",
+				Columns:    []*schema.Column{ImagesColumns[13]},
 				RefColumns: []*schema.Column{ReleasesColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
 			{
 				Symbol:     "images_users_images",
-				Columns:    []*schema.Column{ImagesColumns[13]},
+				Columns:    []*schema.Column{ImagesColumns[14]},
 				RefColumns: []*schema.Column{UsersColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
 		},
+	}
+	// ImageDataColumns holds the columns for the "image_data" table.
+	ImageDataColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt, Increment: true},
+		{Name: "avr_r", Type: field.TypeInt},
+		{Name: "avr_g", Type: field.TypeInt},
+		{Name: "avr_b", Type: field.TypeInt},
+		{Name: "avg_brightness", Type: field.TypeInt},
+		{Name: "avg_saturation", Type: field.TypeInt},
+		{Name: "created_at", Type: field.TypeTime},
+	}
+	// ImageDataTable holds the schema information for the "image_data" table.
+	ImageDataTable = &schema.Table{
+		Name:       "image_data",
+		Columns:    ImageDataColumns,
+		PrimaryKey: []*schema.Column{ImageDataColumns[0]},
 	}
 	// ProcessedImagesColumns holds the columns for the "processed_images" table.
 	ProcessedImagesColumns = []*schema.Column{
@@ -88,6 +111,13 @@ var (
 				Columns:    []*schema.Column{ProcessedImagesColumns[8]},
 				RefColumns: []*schema.Column{ImagesColumns[0]},
 				OnDelete:   schema.NoAction,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "processedimage_image_proccesed_image",
+				Unique:  false,
+				Columns: []*schema.Column{ProcessedImagesColumns[8]},
 			},
 		},
 	}
@@ -211,6 +241,7 @@ var (
 	Tables = []*schema.Table{
 		ArtistsTable,
 		ImagesTable,
+		ImageDataTable,
 		ProcessedImagesTable,
 		ReleasesTable,
 		ReleaseAppearancesTable,
@@ -223,8 +254,9 @@ var (
 
 func init() {
 	ImagesTable.ForeignKeys[0].RefTable = ArtistsTable
-	ImagesTable.ForeignKeys[1].RefTable = ReleasesTable
-	ImagesTable.ForeignKeys[2].RefTable = UsersTable
+	ImagesTable.ForeignKeys[1].RefTable = ImageDataTable
+	ImagesTable.ForeignKeys[2].RefTable = ReleasesTable
+	ImagesTable.ForeignKeys[3].RefTable = UsersTable
 	ProcessedImagesTable.ForeignKeys[0].RefTable = ImagesTable
 	ReleaseAppearancesTable.ForeignKeys[0].RefTable = ArtistsTable
 	ReleaseAppearancesTable.ForeignKeys[1].RefTable = ReleasesTable

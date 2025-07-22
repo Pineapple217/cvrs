@@ -45,6 +45,8 @@ const (
 	EdgeUploader = "uploader"
 	// EdgeProccesedImage holds the string denoting the proccesed_image edge name in mutations.
 	EdgeProccesedImage = "proccesed_image"
+	// EdgeData holds the string denoting the data edge name in mutations.
+	EdgeData = "data"
 	// Table holds the table name of the image in the database.
 	Table = "images"
 	// ReleaseTable is the table that holds the release relation/edge.
@@ -75,6 +77,13 @@ const (
 	ProccesedImageInverseTable = "processed_images"
 	// ProccesedImageColumn is the table column denoting the proccesed_image relation/edge.
 	ProccesedImageColumn = "image_proccesed_image"
+	// DataTable is the table that holds the data relation/edge.
+	DataTable = "images"
+	// DataInverseTable is the table name for the ImageData entity.
+	// It exists in this package in order to avoid circular dependency with the "imagedata" package.
+	DataInverseTable = "image_data"
+	// DataColumn is the table column denoting the data relation/edge.
+	DataColumn = "image_data"
 )
 
 // Columns holds all SQL columns for image fields.
@@ -96,6 +105,7 @@ var Columns = []string{
 // table and are not defined as standalone fields in the schema.
 var ForeignKeys = []string{
 	"artist_image",
+	"image_data",
 	"release_image",
 	"user_images",
 }
@@ -256,6 +266,13 @@ func ByProccesedImage(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 		sqlgraph.OrderByNeighborTerms(s, newProccesedImageStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
+
+// ByDataField orders the results by data field.
+func ByDataField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newDataStep(), sql.OrderByField(field, opts...))
+	}
+}
 func newReleaseStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
@@ -282,5 +299,12 @@ func newProccesedImageStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(ProccesedImageInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, ProccesedImageTable, ProccesedImageColumn),
+	)
+}
+func newDataStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(DataInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, false, DataTable, DataColumn),
 	)
 }

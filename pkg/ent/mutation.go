@@ -14,6 +14,7 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"github.com/Pineapple217/cvrs/pkg/ent/artist"
 	"github.com/Pineapple217/cvrs/pkg/ent/image"
+	"github.com/Pineapple217/cvrs/pkg/ent/imagedata"
 	"github.com/Pineapple217/cvrs/pkg/ent/predicate"
 	"github.com/Pineapple217/cvrs/pkg/ent/processedimage"
 	"github.com/Pineapple217/cvrs/pkg/ent/release"
@@ -36,6 +37,7 @@ const (
 	// Node types.
 	TypeArtist            = "Artist"
 	TypeImage             = "Image"
+	TypeImageData         = "ImageData"
 	TypeProcessedImage    = "ProcessedImage"
 	TypeRelease           = "Release"
 	TypeReleaseAppearance = "ReleaseAppearance"
@@ -825,6 +827,8 @@ type ImageMutation struct {
 	proccesed_image        map[pid.ID]struct{}
 	removedproccesed_image map[pid.ID]struct{}
 	clearedproccesed_image bool
+	data                   *int
+	cleareddata            bool
 	done                   bool
 	oldValue               func(context.Context) (*Image, error)
 	predicates             []predicate.Image
@@ -1551,6 +1555,45 @@ func (m *ImageMutation) ResetProccesedImage() {
 	m.removedproccesed_image = nil
 }
 
+// SetDataID sets the "data" edge to the ImageData entity by id.
+func (m *ImageMutation) SetDataID(id int) {
+	m.data = &id
+}
+
+// ClearData clears the "data" edge to the ImageData entity.
+func (m *ImageMutation) ClearData() {
+	m.cleareddata = true
+}
+
+// DataCleared reports if the "data" edge to the ImageData entity was cleared.
+func (m *ImageMutation) DataCleared() bool {
+	return m.cleareddata
+}
+
+// DataID returns the "data" edge ID in the mutation.
+func (m *ImageMutation) DataID() (id int, exists bool) {
+	if m.data != nil {
+		return *m.data, true
+	}
+	return
+}
+
+// DataIDs returns the "data" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// DataID instead. It exists only for internal usage by the builders.
+func (m *ImageMutation) DataIDs() (ids []int) {
+	if id := m.data; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetData resets all changes to the "data" edge.
+func (m *ImageMutation) ResetData() {
+	m.data = nil
+	m.cleareddata = false
+}
+
 // Where appends a list predicates to the ImageMutation builder.
 func (m *ImageMutation) Where(ps ...predicate.Image) {
 	m.predicates = append(m.predicates, ps...)
@@ -1891,7 +1934,7 @@ func (m *ImageMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *ImageMutation) AddedEdges() []string {
-	edges := make([]string, 0, 4)
+	edges := make([]string, 0, 5)
 	if m.release != nil {
 		edges = append(edges, image.EdgeRelease)
 	}
@@ -1903,6 +1946,9 @@ func (m *ImageMutation) AddedEdges() []string {
 	}
 	if m.proccesed_image != nil {
 		edges = append(edges, image.EdgeProccesedImage)
+	}
+	if m.data != nil {
+		edges = append(edges, image.EdgeData)
 	}
 	return edges
 }
@@ -1929,13 +1975,17 @@ func (m *ImageMutation) AddedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case image.EdgeData:
+		if id := m.data; id != nil {
+			return []ent.Value{*id}
+		}
 	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *ImageMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 4)
+	edges := make([]string, 0, 5)
 	if m.removedproccesed_image != nil {
 		edges = append(edges, image.EdgeProccesedImage)
 	}
@@ -1958,7 +2008,7 @@ func (m *ImageMutation) RemovedIDs(name string) []ent.Value {
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *ImageMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 4)
+	edges := make([]string, 0, 5)
 	if m.clearedrelease {
 		edges = append(edges, image.EdgeRelease)
 	}
@@ -1970,6 +2020,9 @@ func (m *ImageMutation) ClearedEdges() []string {
 	}
 	if m.clearedproccesed_image {
 		edges = append(edges, image.EdgeProccesedImage)
+	}
+	if m.cleareddata {
+		edges = append(edges, image.EdgeData)
 	}
 	return edges
 }
@@ -1986,6 +2039,8 @@ func (m *ImageMutation) EdgeCleared(name string) bool {
 		return m.cleareduploader
 	case image.EdgeProccesedImage:
 		return m.clearedproccesed_image
+	case image.EdgeData:
+		return m.cleareddata
 	}
 	return false
 }
@@ -2002,6 +2057,9 @@ func (m *ImageMutation) ClearEdge(name string) error {
 		return nil
 	case image.EdgeUploader:
 		m.ClearUploader()
+		return nil
+	case image.EdgeData:
+		m.ClearData()
 		return nil
 	}
 	return fmt.Errorf("unknown Image unique edge %s", name)
@@ -2023,8 +2081,868 @@ func (m *ImageMutation) ResetEdge(name string) error {
 	case image.EdgeProccesedImage:
 		m.ResetProccesedImage()
 		return nil
+	case image.EdgeData:
+		m.ResetData()
+		return nil
 	}
 	return fmt.Errorf("unknown Image edge %s", name)
+}
+
+// ImageDataMutation represents an operation that mutates the ImageData nodes in the graph.
+type ImageDataMutation struct {
+	config
+	op                Op
+	typ               string
+	id                *int
+	avr_r             *int
+	addavr_r          *int
+	avr_g             *int
+	addavr_g          *int
+	avr_b             *int
+	addavr_b          *int
+	avg_brightness    *int
+	addavg_brightness *int
+	avg_saturation    *int
+	addavg_saturation *int
+	created_at        *time.Time
+	clearedFields     map[string]struct{}
+	image             map[pid.ID]struct{}
+	removedimage      map[pid.ID]struct{}
+	clearedimage      bool
+	done              bool
+	oldValue          func(context.Context) (*ImageData, error)
+	predicates        []predicate.ImageData
+}
+
+var _ ent.Mutation = (*ImageDataMutation)(nil)
+
+// imagedataOption allows management of the mutation configuration using functional options.
+type imagedataOption func(*ImageDataMutation)
+
+// newImageDataMutation creates new mutation for the ImageData entity.
+func newImageDataMutation(c config, op Op, opts ...imagedataOption) *ImageDataMutation {
+	m := &ImageDataMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeImageData,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withImageDataID sets the ID field of the mutation.
+func withImageDataID(id int) imagedataOption {
+	return func(m *ImageDataMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *ImageData
+		)
+		m.oldValue = func(ctx context.Context) (*ImageData, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().ImageData.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withImageData sets the old ImageData of the mutation.
+func withImageData(node *ImageData) imagedataOption {
+	return func(m *ImageDataMutation) {
+		m.oldValue = func(context.Context) (*ImageData, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m ImageDataMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m ImageDataMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *ImageDataMutation) ID() (id int, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *ImageDataMutation) IDs(ctx context.Context) ([]int, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []int{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().ImageData.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetAvrR sets the "avr_r" field.
+func (m *ImageDataMutation) SetAvrR(i int) {
+	m.avr_r = &i
+	m.addavr_r = nil
+}
+
+// AvrR returns the value of the "avr_r" field in the mutation.
+func (m *ImageDataMutation) AvrR() (r int, exists bool) {
+	v := m.avr_r
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAvrR returns the old "avr_r" field's value of the ImageData entity.
+// If the ImageData object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ImageDataMutation) OldAvrR(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAvrR is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAvrR requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAvrR: %w", err)
+	}
+	return oldValue.AvrR, nil
+}
+
+// AddAvrR adds i to the "avr_r" field.
+func (m *ImageDataMutation) AddAvrR(i int) {
+	if m.addavr_r != nil {
+		*m.addavr_r += i
+	} else {
+		m.addavr_r = &i
+	}
+}
+
+// AddedAvrR returns the value that was added to the "avr_r" field in this mutation.
+func (m *ImageDataMutation) AddedAvrR() (r int, exists bool) {
+	v := m.addavr_r
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetAvrR resets all changes to the "avr_r" field.
+func (m *ImageDataMutation) ResetAvrR() {
+	m.avr_r = nil
+	m.addavr_r = nil
+}
+
+// SetAvrG sets the "avr_g" field.
+func (m *ImageDataMutation) SetAvrG(i int) {
+	m.avr_g = &i
+	m.addavr_g = nil
+}
+
+// AvrG returns the value of the "avr_g" field in the mutation.
+func (m *ImageDataMutation) AvrG() (r int, exists bool) {
+	v := m.avr_g
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAvrG returns the old "avr_g" field's value of the ImageData entity.
+// If the ImageData object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ImageDataMutation) OldAvrG(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAvrG is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAvrG requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAvrG: %w", err)
+	}
+	return oldValue.AvrG, nil
+}
+
+// AddAvrG adds i to the "avr_g" field.
+func (m *ImageDataMutation) AddAvrG(i int) {
+	if m.addavr_g != nil {
+		*m.addavr_g += i
+	} else {
+		m.addavr_g = &i
+	}
+}
+
+// AddedAvrG returns the value that was added to the "avr_g" field in this mutation.
+func (m *ImageDataMutation) AddedAvrG() (r int, exists bool) {
+	v := m.addavr_g
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetAvrG resets all changes to the "avr_g" field.
+func (m *ImageDataMutation) ResetAvrG() {
+	m.avr_g = nil
+	m.addavr_g = nil
+}
+
+// SetAvrB sets the "avr_b" field.
+func (m *ImageDataMutation) SetAvrB(i int) {
+	m.avr_b = &i
+	m.addavr_b = nil
+}
+
+// AvrB returns the value of the "avr_b" field in the mutation.
+func (m *ImageDataMutation) AvrB() (r int, exists bool) {
+	v := m.avr_b
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAvrB returns the old "avr_b" field's value of the ImageData entity.
+// If the ImageData object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ImageDataMutation) OldAvrB(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAvrB is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAvrB requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAvrB: %w", err)
+	}
+	return oldValue.AvrB, nil
+}
+
+// AddAvrB adds i to the "avr_b" field.
+func (m *ImageDataMutation) AddAvrB(i int) {
+	if m.addavr_b != nil {
+		*m.addavr_b += i
+	} else {
+		m.addavr_b = &i
+	}
+}
+
+// AddedAvrB returns the value that was added to the "avr_b" field in this mutation.
+func (m *ImageDataMutation) AddedAvrB() (r int, exists bool) {
+	v := m.addavr_b
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetAvrB resets all changes to the "avr_b" field.
+func (m *ImageDataMutation) ResetAvrB() {
+	m.avr_b = nil
+	m.addavr_b = nil
+}
+
+// SetAvgBrightness sets the "avg_brightness" field.
+func (m *ImageDataMutation) SetAvgBrightness(i int) {
+	m.avg_brightness = &i
+	m.addavg_brightness = nil
+}
+
+// AvgBrightness returns the value of the "avg_brightness" field in the mutation.
+func (m *ImageDataMutation) AvgBrightness() (r int, exists bool) {
+	v := m.avg_brightness
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAvgBrightness returns the old "avg_brightness" field's value of the ImageData entity.
+// If the ImageData object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ImageDataMutation) OldAvgBrightness(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAvgBrightness is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAvgBrightness requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAvgBrightness: %w", err)
+	}
+	return oldValue.AvgBrightness, nil
+}
+
+// AddAvgBrightness adds i to the "avg_brightness" field.
+func (m *ImageDataMutation) AddAvgBrightness(i int) {
+	if m.addavg_brightness != nil {
+		*m.addavg_brightness += i
+	} else {
+		m.addavg_brightness = &i
+	}
+}
+
+// AddedAvgBrightness returns the value that was added to the "avg_brightness" field in this mutation.
+func (m *ImageDataMutation) AddedAvgBrightness() (r int, exists bool) {
+	v := m.addavg_brightness
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetAvgBrightness resets all changes to the "avg_brightness" field.
+func (m *ImageDataMutation) ResetAvgBrightness() {
+	m.avg_brightness = nil
+	m.addavg_brightness = nil
+}
+
+// SetAvgSaturation sets the "avg_saturation" field.
+func (m *ImageDataMutation) SetAvgSaturation(i int) {
+	m.avg_saturation = &i
+	m.addavg_saturation = nil
+}
+
+// AvgSaturation returns the value of the "avg_saturation" field in the mutation.
+func (m *ImageDataMutation) AvgSaturation() (r int, exists bool) {
+	v := m.avg_saturation
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAvgSaturation returns the old "avg_saturation" field's value of the ImageData entity.
+// If the ImageData object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ImageDataMutation) OldAvgSaturation(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAvgSaturation is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAvgSaturation requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAvgSaturation: %w", err)
+	}
+	return oldValue.AvgSaturation, nil
+}
+
+// AddAvgSaturation adds i to the "avg_saturation" field.
+func (m *ImageDataMutation) AddAvgSaturation(i int) {
+	if m.addavg_saturation != nil {
+		*m.addavg_saturation += i
+	} else {
+		m.addavg_saturation = &i
+	}
+}
+
+// AddedAvgSaturation returns the value that was added to the "avg_saturation" field in this mutation.
+func (m *ImageDataMutation) AddedAvgSaturation() (r int, exists bool) {
+	v := m.addavg_saturation
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetAvgSaturation resets all changes to the "avg_saturation" field.
+func (m *ImageDataMutation) ResetAvgSaturation() {
+	m.avg_saturation = nil
+	m.addavg_saturation = nil
+}
+
+// SetCreatedAt sets the "created_at" field.
+func (m *ImageDataMutation) SetCreatedAt(t time.Time) {
+	m.created_at = &t
+}
+
+// CreatedAt returns the value of the "created_at" field in the mutation.
+func (m *ImageDataMutation) CreatedAt() (r time.Time, exists bool) {
+	v := m.created_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatedAt returns the old "created_at" field's value of the ImageData entity.
+// If the ImageData object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ImageDataMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
+	}
+	return oldValue.CreatedAt, nil
+}
+
+// ResetCreatedAt resets all changes to the "created_at" field.
+func (m *ImageDataMutation) ResetCreatedAt() {
+	m.created_at = nil
+}
+
+// AddImageIDs adds the "image" edge to the Image entity by ids.
+func (m *ImageDataMutation) AddImageIDs(ids ...pid.ID) {
+	if m.image == nil {
+		m.image = make(map[pid.ID]struct{})
+	}
+	for i := range ids {
+		m.image[ids[i]] = struct{}{}
+	}
+}
+
+// ClearImage clears the "image" edge to the Image entity.
+func (m *ImageDataMutation) ClearImage() {
+	m.clearedimage = true
+}
+
+// ImageCleared reports if the "image" edge to the Image entity was cleared.
+func (m *ImageDataMutation) ImageCleared() bool {
+	return m.clearedimage
+}
+
+// RemoveImageIDs removes the "image" edge to the Image entity by IDs.
+func (m *ImageDataMutation) RemoveImageIDs(ids ...pid.ID) {
+	if m.removedimage == nil {
+		m.removedimage = make(map[pid.ID]struct{})
+	}
+	for i := range ids {
+		delete(m.image, ids[i])
+		m.removedimage[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedImage returns the removed IDs of the "image" edge to the Image entity.
+func (m *ImageDataMutation) RemovedImageIDs() (ids []pid.ID) {
+	for id := range m.removedimage {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ImageIDs returns the "image" edge IDs in the mutation.
+func (m *ImageDataMutation) ImageIDs() (ids []pid.ID) {
+	for id := range m.image {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetImage resets all changes to the "image" edge.
+func (m *ImageDataMutation) ResetImage() {
+	m.image = nil
+	m.clearedimage = false
+	m.removedimage = nil
+}
+
+// Where appends a list predicates to the ImageDataMutation builder.
+func (m *ImageDataMutation) Where(ps ...predicate.ImageData) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the ImageDataMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *ImageDataMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.ImageData, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *ImageDataMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *ImageDataMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (ImageData).
+func (m *ImageDataMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *ImageDataMutation) Fields() []string {
+	fields := make([]string, 0, 6)
+	if m.avr_r != nil {
+		fields = append(fields, imagedata.FieldAvrR)
+	}
+	if m.avr_g != nil {
+		fields = append(fields, imagedata.FieldAvrG)
+	}
+	if m.avr_b != nil {
+		fields = append(fields, imagedata.FieldAvrB)
+	}
+	if m.avg_brightness != nil {
+		fields = append(fields, imagedata.FieldAvgBrightness)
+	}
+	if m.avg_saturation != nil {
+		fields = append(fields, imagedata.FieldAvgSaturation)
+	}
+	if m.created_at != nil {
+		fields = append(fields, imagedata.FieldCreatedAt)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *ImageDataMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case imagedata.FieldAvrR:
+		return m.AvrR()
+	case imagedata.FieldAvrG:
+		return m.AvrG()
+	case imagedata.FieldAvrB:
+		return m.AvrB()
+	case imagedata.FieldAvgBrightness:
+		return m.AvgBrightness()
+	case imagedata.FieldAvgSaturation:
+		return m.AvgSaturation()
+	case imagedata.FieldCreatedAt:
+		return m.CreatedAt()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *ImageDataMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case imagedata.FieldAvrR:
+		return m.OldAvrR(ctx)
+	case imagedata.FieldAvrG:
+		return m.OldAvrG(ctx)
+	case imagedata.FieldAvrB:
+		return m.OldAvrB(ctx)
+	case imagedata.FieldAvgBrightness:
+		return m.OldAvgBrightness(ctx)
+	case imagedata.FieldAvgSaturation:
+		return m.OldAvgSaturation(ctx)
+	case imagedata.FieldCreatedAt:
+		return m.OldCreatedAt(ctx)
+	}
+	return nil, fmt.Errorf("unknown ImageData field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *ImageDataMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case imagedata.FieldAvrR:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAvrR(v)
+		return nil
+	case imagedata.FieldAvrG:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAvrG(v)
+		return nil
+	case imagedata.FieldAvrB:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAvrB(v)
+		return nil
+	case imagedata.FieldAvgBrightness:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAvgBrightness(v)
+		return nil
+	case imagedata.FieldAvgSaturation:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAvgSaturation(v)
+		return nil
+	case imagedata.FieldCreatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatedAt(v)
+		return nil
+	}
+	return fmt.Errorf("unknown ImageData field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *ImageDataMutation) AddedFields() []string {
+	var fields []string
+	if m.addavr_r != nil {
+		fields = append(fields, imagedata.FieldAvrR)
+	}
+	if m.addavr_g != nil {
+		fields = append(fields, imagedata.FieldAvrG)
+	}
+	if m.addavr_b != nil {
+		fields = append(fields, imagedata.FieldAvrB)
+	}
+	if m.addavg_brightness != nil {
+		fields = append(fields, imagedata.FieldAvgBrightness)
+	}
+	if m.addavg_saturation != nil {
+		fields = append(fields, imagedata.FieldAvgSaturation)
+	}
+	return fields
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *ImageDataMutation) AddedField(name string) (ent.Value, bool) {
+	switch name {
+	case imagedata.FieldAvrR:
+		return m.AddedAvrR()
+	case imagedata.FieldAvrG:
+		return m.AddedAvrG()
+	case imagedata.FieldAvrB:
+		return m.AddedAvrB()
+	case imagedata.FieldAvgBrightness:
+		return m.AddedAvgBrightness()
+	case imagedata.FieldAvgSaturation:
+		return m.AddedAvgSaturation()
+	}
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *ImageDataMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	case imagedata.FieldAvrR:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddAvrR(v)
+		return nil
+	case imagedata.FieldAvrG:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddAvrG(v)
+		return nil
+	case imagedata.FieldAvrB:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddAvrB(v)
+		return nil
+	case imagedata.FieldAvgBrightness:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddAvgBrightness(v)
+		return nil
+	case imagedata.FieldAvgSaturation:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddAvgSaturation(v)
+		return nil
+	}
+	return fmt.Errorf("unknown ImageData numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *ImageDataMutation) ClearedFields() []string {
+	return nil
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *ImageDataMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *ImageDataMutation) ClearField(name string) error {
+	return fmt.Errorf("unknown ImageData nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *ImageDataMutation) ResetField(name string) error {
+	switch name {
+	case imagedata.FieldAvrR:
+		m.ResetAvrR()
+		return nil
+	case imagedata.FieldAvrG:
+		m.ResetAvrG()
+		return nil
+	case imagedata.FieldAvrB:
+		m.ResetAvrB()
+		return nil
+	case imagedata.FieldAvgBrightness:
+		m.ResetAvgBrightness()
+		return nil
+	case imagedata.FieldAvgSaturation:
+		m.ResetAvgSaturation()
+		return nil
+	case imagedata.FieldCreatedAt:
+		m.ResetCreatedAt()
+		return nil
+	}
+	return fmt.Errorf("unknown ImageData field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *ImageDataMutation) AddedEdges() []string {
+	edges := make([]string, 0, 1)
+	if m.image != nil {
+		edges = append(edges, imagedata.EdgeImage)
+	}
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *ImageDataMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case imagedata.EdgeImage:
+		ids := make([]ent.Value, 0, len(m.image))
+		for id := range m.image {
+			ids = append(ids, id)
+		}
+		return ids
+	}
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *ImageDataMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 1)
+	if m.removedimage != nil {
+		edges = append(edges, imagedata.EdgeImage)
+	}
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *ImageDataMutation) RemovedIDs(name string) []ent.Value {
+	switch name {
+	case imagedata.EdgeImage:
+		ids := make([]ent.Value, 0, len(m.removedimage))
+		for id := range m.removedimage {
+			ids = append(ids, id)
+		}
+		return ids
+	}
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *ImageDataMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 1)
+	if m.clearedimage {
+		edges = append(edges, imagedata.EdgeImage)
+	}
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *ImageDataMutation) EdgeCleared(name string) bool {
+	switch name {
+	case imagedata.EdgeImage:
+		return m.clearedimage
+	}
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *ImageDataMutation) ClearEdge(name string) error {
+	switch name {
+	}
+	return fmt.Errorf("unknown ImageData unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *ImageDataMutation) ResetEdge(name string) error {
+	switch name {
+	case imagedata.EdgeImage:
+		m.ResetImage()
+		return nil
+	}
+	return fmt.Errorf("unknown ImageData edge %s", name)
 }
 
 // ProcessedImageMutation represents an operation that mutates the ProcessedImage nodes in the graph.

@@ -6,6 +6,7 @@ import (
 	"entgo.io/ent"
 	"entgo.io/ent/schema/edge"
 	"entgo.io/ent/schema/field"
+	"entgo.io/ent/schema/index"
 )
 
 // ProcessedImage holds the schema definition for the ProcessedImage entity.
@@ -52,5 +53,11 @@ func (ProcessedImage) Edges() []ent.Edge {
 func (ProcessedImage) Mixin() []ent.Mixin {
 	return []ent.Mixin{
 		IDMixin{},
+	}
+}
+
+func (ProcessedImage) Indexes() []ent.Index {
+	return []ent.Index{
+		index.Edges("source"),
 	}
 }

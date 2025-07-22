@@ -12,6 +12,9 @@ type Artist func(*sql.Selector)
 // Image is the predicate function for image builders.
 type Image func(*sql.Selector)
 
+// ImageData is the predicate function for imagedata builders.
+type ImageData func(*sql.Selector)
+
 // ProcessedImage is the predicate function for processedimage builders.
 type ProcessedImage func(*sql.Selector)
 

@@ -65,6 +65,8 @@ func (Image) Edges() []ent.Edge {
 			Unique().
 			Required(),
 		edge.To("proccesed_image", ProcessedImage.Type),
+		edge.To("data", ImageData.Type).
+			Unique(),
 	}
 }
 

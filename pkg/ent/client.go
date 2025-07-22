@@ -18,6 +18,7 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/Pineapple217/cvrs/pkg/ent/artist"
 	"github.com/Pineapple217/cvrs/pkg/ent/image"
+	"github.com/Pineapple217/cvrs/pkg/ent/imagedata"
 	"github.com/Pineapple217/cvrs/pkg/ent/processedimage"
 	"github.com/Pineapple217/cvrs/pkg/ent/release"
 	"github.com/Pineapple217/cvrs/pkg/ent/releaseappearance"
@@ -38,6 +39,8 @@ type Client struct {
 	Artist *ArtistClient
 	// Image is the client for interacting with the Image builders.
 	Image *ImageClient
+	// ImageData is the client for interacting with the ImageData builders.
+	ImageData *ImageDataClient
 	// ProcessedImage is the client for interacting with the ProcessedImage builders.
 	ProcessedImage *ProcessedImageClient
 	// Release is the client for interacting with the Release builders.
@@ -65,6 +68,7 @@ func (c *Client) init() {
 	c.Schema = migrate.NewSchema(c.driver)
 	c.Artist = NewArtistClient(c.config)
 	c.Image = NewImageClient(c.config)
+	c.ImageData = NewImageDataClient(c.config)
 	c.ProcessedImage = NewProcessedImageClient(c.config)
 	c.Release = NewReleaseClient(c.config)
 	c.ReleaseAppearance = NewReleaseAppearanceClient(c.config)
@@ -166,6 +170,7 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		config:            cfg,
 		Artist:            NewArtistClient(cfg),
 		Image:             NewImageClient(cfg),
+		ImageData:         NewImageDataClient(cfg),
 		ProcessedImage:    NewProcessedImageClient(cfg),
 		Release:           NewReleaseClient(cfg),
 		ReleaseAppearance: NewReleaseAppearanceClient(cfg),
@@ -194,6 +199,7 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		config:            cfg,
 		Artist:            NewArtistClient(cfg),
 		Image:             NewImageClient(cfg),
+		ImageData:         NewImageDataClient(cfg),
 		ProcessedImage:    NewProcessedImageClient(cfg),
 		Release:           NewReleaseClient(cfg),
 		ReleaseAppearance: NewReleaseAppearanceClient(cfg),
@@ -230,8 +236,8 @@ func (c *Client) Close() error {
 // In order to add hooks to a specific client, call: `client.Node.Use(...)`.
 func (c *Client) Use(hooks ...Hook) {
 	for _, n := range []interface{ Use(...Hook) }{
-		c.Artist, c.Image, c.ProcessedImage, c.Release, c.ReleaseAppearance, c.Task,
-		c.Track, c.TrackAppearance, c.User,
+		c.Artist, c.Image, c.ImageData, c.ProcessedImage, c.Release,
+		c.ReleaseAppearance, c.Task, c.Track, c.TrackAppearance, c.User,
 	} {
 		n.Use(hooks...)
 	}
@@ -241,8 +247,8 @@ func (c *Client) Use(hooks ...Hook) {
 // In order to add interceptors to a specific client, call: `client.Node.Intercept(...)`.
 func (c *Client) Intercept(interceptors ...Interceptor) {
 	for _, n := range []interface{ Intercept(...Interceptor) }{
-		c.Artist, c.Image, c.ProcessedImage, c.Release, c.ReleaseAppearance, c.Task,
-		c.Track, c.TrackAppearance, c.User,
+		c.Artist, c.Image, c.ImageData, c.ProcessedImage, c.Release,
+		c.ReleaseAppearance, c.Task, c.Track, c.TrackAppearance, c.User,
 	} {
 		n.Intercept(interceptors...)
 	}
@@ -255,6 +261,8 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.Artist.mutate(ctx, m)
 	case *ImageMutation:
 		return c.Image.mutate(ctx, m)
+	case *ImageDataMutation:
+		return c.ImageData.mutate(ctx, m)
 	case *ProcessedImageMutation:
 		return c.ProcessedImage.mutate(ctx, m)
 	case *ReleaseMutation:
@@ -659,6 +667,22 @@ func (c *ImageClient) QueryProccesedImage(i *Image) *ProcessedImageQuery {
 	return query
 }
 
+// QueryData queries the data edge of a Image.
+func (c *ImageClient) QueryData(i *Image) *ImageDataQuery {
+	query := (&ImageDataClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := i.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(image.Table, image.FieldID, id),
+			sqlgraph.To(imagedata.Table, imagedata.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, false, image.DataTable, image.DataColumn),
+		)
+		fromV = sqlgraph.Neighbors(i.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // Hooks returns the client hooks.
 func (c *ImageClient) Hooks() []Hook {
 	hooks := c.hooks.Image
@@ -682,6 +706,155 @@ func (c *ImageClient) mutate(ctx context.Context, m *ImageMutation) (Value, erro
 		return (&ImageDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
 	default:
 		return nil, fmt.Errorf("ent: unknown Image mutation op: %q", m.Op())
+	}
+}
+
+// ImageDataClient is a client for the ImageData schema.
+type ImageDataClient struct {
+	config
+}
+
+// NewImageDataClient returns a client for the ImageData from the given config.
+func NewImageDataClient(c config) *ImageDataClient {
+	return &ImageDataClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `imagedata.Hooks(f(g(h())))`.
+func (c *ImageDataClient) Use(hooks ...Hook) {
+	c.hooks.ImageData = append(c.hooks.ImageData, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `imagedata.Intercept(f(g(h())))`.
+func (c *ImageDataClient) Intercept(interceptors ...Interceptor) {
+	c.inters.ImageData = append(c.inters.ImageData, interceptors...)
+}
+
+// Create returns a builder for creating a ImageData entity.
+func (c *ImageDataClient) Create() *ImageDataCreate {
+	mutation := newImageDataMutation(c.config, OpCreate)
+	return &ImageDataCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of ImageData entities.
+func (c *ImageDataClient) CreateBulk(builders ...*ImageDataCreate) *ImageDataCreateBulk {
+	return &ImageDataCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *ImageDataClient) MapCreateBulk(slice any, setFunc func(*ImageDataCreate, int)) *ImageDataCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &ImageDataCreateBulk{err: fmt.Errorf("calling to ImageDataClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*ImageDataCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &ImageDataCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for ImageData.
+func (c *ImageDataClient) Update() *ImageDataUpdate {
+	mutation := newImageDataMutation(c.config, OpUpdate)
+	return &ImageDataUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *ImageDataClient) UpdateOne(id *ImageData) *ImageDataUpdateOne {
+	mutation := newImageDataMutation(c.config, OpUpdateOne, withImageData(id))
+	return &ImageDataUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *ImageDataClient) UpdateOneID(id int) *ImageDataUpdateOne {
+	mutation := newImageDataMutation(c.config, OpUpdateOne, withImageDataID(id))
+	return &ImageDataUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for ImageData.
+func (c *ImageDataClient) Delete() *ImageDataDelete {
+	mutation := newImageDataMutation(c.config, OpDelete)
+	return &ImageDataDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *ImageDataClient) DeleteOne(id *ImageData) *ImageDataDeleteOne {
+	return c.DeleteOneID(id.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *ImageDataClient) DeleteOneID(id int) *ImageDataDeleteOne {
+	builder := c.Delete().Where(imagedata.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &ImageDataDeleteOne{builder}
+}
+
+// Query returns a query builder for ImageData.
+func (c *ImageDataClient) Query() *ImageDataQuery {
+	return &ImageDataQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeImageData},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a ImageData entity by its id.
+func (c *ImageDataClient) Get(ctx context.Context, id int) (*ImageData, error) {
+	return c.Query().Where(imagedata.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *ImageDataClient) GetX(ctx context.Context, id int) *ImageData {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryImage queries the image edge of a ImageData.
+func (c *ImageDataClient) QueryImage(node *ImageData) *ImageQuery {
+	query := (&ImageClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := node.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(imagedata.Table, imagedata.FieldID, id),
+			sqlgraph.To(image.Table, image.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, true, imagedata.ImageTable, imagedata.ImageColumn),
+		)
+		fromV = sqlgraph.Neighbors(node.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *ImageDataClient) Hooks() []Hook {
+	return c.hooks.ImageData
+}
+
+// Interceptors returns the client interceptors.
+func (c *ImageDataClient) Interceptors() []Interceptor {
+	return c.inters.ImageData
+}
+
+func (c *ImageDataClient) mutate(ctx context.Context, m *ImageDataMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&ImageDataCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&ImageDataUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&ImageDataUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&ImageDataDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown ImageData mutation op: %q", m.Op())
 	}
 }
 
@@ -1729,12 +1902,12 @@ func (c *UserClient) mutate(ctx context.Context, m *UserMutation) (Value, error)
 // hooks and interceptors per client, for fast access.
 type (
 	hooks struct {
-		Artist, Image, ProcessedImage, Release, ReleaseAppearance, Task, Track,
-		TrackAppearance, User []ent.Hook
+		Artist, Image, ImageData, ProcessedImage, Release, ReleaseAppearance, Task,
+		Track, TrackAppearance, User []ent.Hook
 	}
 	inters struct {
-		Artist, Image, ProcessedImage, Release, ReleaseAppearance, Task, Track,
-		TrackAppearance, User []ent.Interceptor
+		Artist, Image, ImageData, ProcessedImage, Release, ReleaseAppearance, Task,
+		Track, TrackAppearance, User []ent.Interceptor
 	}
 )
 

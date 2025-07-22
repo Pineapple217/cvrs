@@ -14,6 +14,7 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/Pineapple217/cvrs/pkg/ent/artist"
 	"github.com/Pineapple217/cvrs/pkg/ent/image"
+	"github.com/Pineapple217/cvrs/pkg/ent/imagedata"
 	"github.com/Pineapple217/cvrs/pkg/ent/processedimage"
 	"github.com/Pineapple217/cvrs/pkg/ent/release"
 	"github.com/Pineapple217/cvrs/pkg/ent/releaseappearance"
@@ -83,6 +84,7 @@ func checkColumn(table, column string) error {
 		columnCheck = sql.NewColumnCheck(map[string]func(string) bool{
 			artist.Table:            artist.ValidColumn,
 			image.Table:             image.ValidColumn,
+			imagedata.Table:         imagedata.ValidColumn,
 			processedimage.Table:    processedimage.ValidColumn,
 			release.Table:           release.ValidColumn,
 			releaseappearance.Table: releaseappearance.ValidColumn,

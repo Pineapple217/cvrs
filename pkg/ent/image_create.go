@@ -12,6 +12,7 @@ import (
 	"entgo.io/ent/schema/field"
 	"github.com/Pineapple217/cvrs/pkg/ent/artist"
 	"github.com/Pineapple217/cvrs/pkg/ent/image"
+	"github.com/Pineapple217/cvrs/pkg/ent/imagedata"
 	"github.com/Pineapple217/cvrs/pkg/ent/processedimage"
 	"github.com/Pineapple217/cvrs/pkg/ent/release"
 	"github.com/Pineapple217/cvrs/pkg/ent/user"
@@ -193,6 +194,25 @@ func (ic *ImageCreate) AddProccesedImage(p ...*ProcessedImage) *ImageCreate {
 		ids[i] = p[i].ID
 	}
 	return ic.AddProccesedImageIDs(ids...)
+}
+
+// SetDataID sets the "data" edge to the ImageData entity by ID.
+func (ic *ImageCreate) SetDataID(id int) *ImageCreate {
+	ic.mutation.SetDataID(id)
+	return ic
+}
+
+// SetNillableDataID sets the "data" edge to the ImageData entity by ID if the given value is not nil.
+func (ic *ImageCreate) SetNillableDataID(id *int) *ImageCreate {
+	if id != nil {
+		ic = ic.SetDataID(*id)
+	}
+	return ic
+}
+
+// SetData sets the "data" edge to the ImageData entity.
+func (ic *ImageCreate) SetData(i *ImageData) *ImageCreate {
+	return ic.SetDataID(i.ID)
 }
 
 // Mutation returns the ImageMutation object of the builder.
@@ -447,6 +467,23 @@ func (ic *ImageCreate) createSpec() (*Image, *sqlgraph.CreateSpec) {
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := ic.mutation.DataIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: false,
+			Table:   image.DataTable,
+			Columns: []string{image.DataColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(imagedata.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.image_data = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec
