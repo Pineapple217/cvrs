@@ -65,31 +65,30 @@ export function ArtistsList() {
       {status === "success" &&
         data.pages.map((artists, i) => (
           <>
-            {artists.map((artist) => (
-              <div key={artist.id}>
-                <a href={`/artist/${artist.id}`}>
-                  <span>{artist.name}</span>
-                  <img
-                    loading="lazy"
-                    src={
-                      __BACKEND_URL__ +
-                      "/i/" +
-                      artist.edges.image.edges.proccesed_image.find(
-                        (a) => a.dimentions === 265
-                      ).id
-                    }
-                    style={{
-                      backgroundImage: `url(${
-                        artist.edges.image.edges.proccesed_image.find(
-                          (a) => a.dimentions === 265
-                        ).thumb
-                      })`,
-                    }}
-                    alt={`picture of ${artist.name}`}
-                  />
-                </a>
-              </div>
-            ))}
+            {artists.map((artist) => {
+              let processedImage =
+                artist.edges.image.edges.proccesed_image.find(
+                  (a) => a.dimentions === 265
+                );
+              if (!processedImage) {
+                processedImage = artist.edges.image.edges.proccesed_image[0];
+              }
+              return (
+                <div key={artist.id}>
+                  <a href={`/artist/${artist.id}`}>
+                    <span>{artist.name}</span>
+                    <img
+                      loading="lazy"
+                      src={__BACKEND_URL__ + "/i/" + processedImage.id}
+                      style={{
+                        backgroundImage: `url(${processedImage.thumb})`,
+                      }}
+                      alt={`picture of ${artist.name}`}
+                    />
+                  </a>
+                </div>
+              );
+            })}
           </>
         ))}
       <div ref={loadMoreRef} style={{ background: "#0e0e0e" }}>

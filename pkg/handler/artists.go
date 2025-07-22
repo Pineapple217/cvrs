@@ -9,6 +9,8 @@ import (
 
 	"github.com/Pineapple217/cvrs/pkg/ent"
 	"github.com/Pineapple217/cvrs/pkg/ent/artist"
+	"github.com/Pineapple217/cvrs/pkg/ent/image"
+	"github.com/Pineapple217/cvrs/pkg/ent/processedimage"
 	"github.com/Pineapple217/cvrs/pkg/pid"
 	"github.com/Pineapple217/cvrs/pkg/users"
 	"github.com/labstack/echo/v4"
@@ -84,8 +86,11 @@ func (h *Handler) ArtistsGet(c echo.Context) error {
 		Offset(offset).
 		Limit(limit).
 		WithImage(func(iq *ent.ImageQuery) {
-			iq.Select("id").WithProccesedImage()
+			iq.Select("id").WithProccesedImage(func(piq *ent.ProcessedImageQuery) {
+				piq.Order(ent.Desc(processedimage.FieldDimentions))
+			})
 		}).
+		Where(artist.HasImageWith(image.HasProccesedImage())).
 		All(c.Request().Context())
 	if err != nil {
 		return err
