@@ -5,5 +5,5 @@ type Workforce struct {
 }
 
 func (c *Workforce) SetDefault() {
-	c.MaxWorkers = 2
+	c.MaxWorkers = 5
 }

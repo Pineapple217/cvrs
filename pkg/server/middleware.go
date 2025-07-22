@@ -14,7 +14,7 @@ func (s *Server) ApplyMiddleware(dev bool) {
 	slog.Info("Applying middlewares")
 	s.e.Use(echoMw.RateLimiterWithConfig(echoMw.RateLimiterConfig{
 		Store: echoMw.NewRateLimiterMemoryStoreWithConfig(
-			echoMw.RateLimiterMemoryStoreConfig{Rate: 30, Burst: 60, ExpiresIn: 3 * time.Minute},
+			echoMw.RateLimiterMemoryStoreConfig{Rate: 30, Burst: 200, ExpiresIn: 3 * time.Minute},
 		),
 	}))
 	s.e.Use(echoMw.RequestLoggerWithConfig(echoMw.RequestLoggerConfig{
