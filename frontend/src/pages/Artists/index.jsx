@@ -1,11 +1,10 @@
-import { signal, useSignal } from "@preact/signals";
+import { useSignal } from "@preact/signals";
 import { Header } from "../../components/Header";
 import "./style.css";
 import { Modal } from "../../components/Modal";
 import ImageUploader from "../../components/ImgUpload";
 import { ArtistsAdd } from "../../lib/artists";
-import { AuthContext, useAuth } from "../../components/AuthProvider";
-import { useContext } from "preact/hooks";
+import { useAuth } from "../../components/AuthProvider";
 import { ArtistsList } from "../../components/ArtistsList";
 
 export function Artists() {

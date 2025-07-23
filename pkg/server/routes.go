@@ -33,6 +33,8 @@ func (server *Server) RegisterRoutes(hdlr *handler.Handler, imgDir string) {
 	api.GET("/artist/:id", hdlr.ArtistGetId)
 	api.GET("/artists", hdlr.ArtistsGet)
 
+	api.POST("/releases/add", users.CheckAdmin(hdlr.ReleaseAdd))
+
 	// frontend
 	frontend := static.GetFrontend()
 	e.StaticFS("", frontend)

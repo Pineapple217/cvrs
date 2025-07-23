@@ -12,6 +12,7 @@ import { Artists } from "./pages/Artists/index.jsx";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Artist } from "./pages/Artist/index.jsx";
 import { LoadingIndicator } from "./components/LoadingIndicator.jsx";
+import { Releases } from "./pages/Releases/index.jsx";
 
 const queryClient = new QueryClient();
 
@@ -30,6 +31,7 @@ export function App() {
                 <Route path="/artists" component={Artists} />
                 <Route path="/artist/:id" component={Artist} />
                 <Route path="/admin" component={Admin} />
+                <Route path="/releases" component={Releases} />
                 <Route default component={NotFound} />
               </Router>
             </body>

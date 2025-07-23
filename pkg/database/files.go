@@ -11,13 +11,11 @@ import (
 	"os"
 	"path"
 	"slices"
-	"strings"
 
 	_ "image/jpeg"
 	_ "image/png"
 
 	"github.com/Pineapple217/cvrs/pkg/ent"
-	entImage "github.com/Pineapple217/cvrs/pkg/ent/image"
 	"github.com/Pineapple217/cvrs/pkg/ent/processedimage"
 	"github.com/Pineapple217/cvrs/pkg/ent/task"
 	"github.com/Pineapple217/cvrs/pkg/pid"
@@ -220,19 +218,6 @@ func (d Database) SaveProcessedImgs(ctx context.Context, source pid.ID, imgs []i
 		dbImg.Unwrap()
 	}
 	return dbImgs, nil
-}
-
-func ParseImageType(s string) (entImage.Type, error) {
-	switch strings.ToUpper(s) {
-	case "WEBP":
-		return entImage.TypeWEBP, nil
-	case "PNG":
-		return entImage.TypePNG, nil
-	case "JPG", "JPEG":
-		return entImage.TypeJPG, nil
-	default:
-		return "", fmt.Errorf("invalid ImageType: %q", s)
-	}
 }
 
 func (d *Database) HardDeleteImg(ctx context.Context, id pid.ID) error {
